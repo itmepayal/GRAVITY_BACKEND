@@ -3,6 +3,7 @@ import type { IProject } from "../models/project.model";
 import { JWTPayload } from ".";
 import { ISprint } from "../models/sprint.model";
 import { IRole } from "../models/role.model";
+import { ITask } from "../models/task.model";
 
 declare global {
   namespace Express {
@@ -23,6 +24,8 @@ declare global {
       sprint?: ISprint;
 
       role?: IRole;
+
+      task?: ITask;
     }
   }
 }

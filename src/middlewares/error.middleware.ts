@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { ZodError } from "zod";
 import { AppError, NotFoundError } from "../utils/errors/app.error";
 
@@ -8,6 +9,8 @@ export const errorHandler = (
   res: Response,
   next: NextFunction,
 ): void => {
+  console.error(err);
+
   if (err instanceof ZodError) {
     res.status(400).json({
       success: false,
@@ -20,6 +23,22 @@ export const errorHandler = (
     return;
   }
 
+  if (err instanceof TokenExpiredError) {
+    res.status(401).json({
+      success: false,
+      message: "Access token has expired.",
+    });
+    return;
+  }
+
+  if (err instanceof JsonWebTokenError) {
+    res.status(401).json({
+      success: false,
+      message: "Invalid access token.",
+    });
+    return;
+  }
+
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
       success: false,
@@ -27,8 +46,6 @@ export const errorHandler = (
     });
     return;
   }
-
-  console.error(err);
 
   res.status(500).json({
     success: false,
