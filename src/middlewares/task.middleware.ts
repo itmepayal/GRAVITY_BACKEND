@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import Task from "../models/task.model";
-import { NotFoundError } from "../utils/errors/app.error";
+import { ForbiddenError, NotFoundError } from "../utils/errors/app.error";
 import { checkBoardAccess } from "./board.middleware";
 import { checkProjectAccess } from "./project.middleware";
 
@@ -39,6 +39,44 @@ export const checkTaskCreateAccess = async (
 
     req.params.boardId = board;
     return checkBoardAccess(req, res, next);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const checkCommentOwnership = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { commentId } = req.params;
+    const userId = req.user!.id;
+    const task = req.task;
+
+    if (!task) {
+      throw new NotFoundError("Task not found.");
+    }
+
+    const comment = task.comments.find(
+      (c: any) => c._id.toString() === commentId,
+    );
+
+    if (!comment) {
+      throw new NotFoundError("Comment not found.");
+    }
+
+    const permissions = req.projectPermissions ?? [];
+    const isOwner = comment.user.toString() === userId;
+    const canManage =
+      permissions.includes("*") || permissions.includes("task:manage_comments");
+
+    if (!isOwner && !canManage) {
+      throw new ForbiddenError("You can only edit or delete your own comment.");
+    }
+
+    req.comment = comment;
+    return next();
   } catch (error) {
     next(error);
   }

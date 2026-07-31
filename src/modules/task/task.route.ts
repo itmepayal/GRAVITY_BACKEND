@@ -1,12 +1,22 @@
 import express from "express";
 import { authenticate } from "../../middlewares/auth.middleware";
-import { requirePermission } from "../../middlewares/project.middleware";
-import { requireBoardPermission } from "../../middlewares/board.middleware";
 import {
   checkTaskAccess,
   checkTaskCreateAccess,
 } from "../../middlewares/task.middleware";
-import { createTaskController, getTaskByIdController } from "./task.controller";
+import {
+  checkBoardAccess,
+  requireBoardPermission,
+} from "../../middlewares/board.middleware";
+import { requirePermission } from "../../middlewares/project.middleware";
+import {
+  createTaskController,
+  getAllTasksOfBoardController,
+  getTaskByIdController,
+  updateTaskController,
+  deleteTaskController,
+  archiveTaskController,
+} from "./task.controller";
 import { upload } from "../../middlewares/multer.middleware";
 
 const taskRouter = express.Router();
@@ -14,35 +24,46 @@ const taskRouter = express.Router();
 taskRouter.post(
   "/",
   authenticate,
-  (req, res, next) => {
-    console.log("✅ Authenticate Passed");
-    next();
-  },
-  upload.array("attachments", 10),
-  (req, res, next) => {
-    console.log("📂 Uploaded Files:", req.files);
-    console.log("📝 Body:", req.body);
-    next();
-  },
+  upload.array("attachments"),
   checkTaskCreateAccess,
-  (req, res, next) => {
-    console.log("✅ Task Create Access Passed");
-    next();
-  },
   requireBoardPermission("task:create"),
-  (req, res, next) => {
-    console.log("✅ Board Permission Passed");
-    next();
-  },
   createTaskController,
 );
-
+taskRouter.get(
+  "/boards/:boardId/tasks",
+  authenticate,
+  checkBoardAccess,
+  requireBoardPermission("task:view"),
+  getAllTasksOfBoardController,
+);
 taskRouter.get(
   "/:taskId",
   authenticate,
   checkTaskAccess,
   requirePermission("task:view"),
   getTaskByIdController,
+);
+taskRouter.patch(
+  "/:taskId",
+  authenticate,
+  upload.array("attachments", 10),
+  checkTaskAccess,
+  requirePermission("task:update"),
+  updateTaskController,
+);
+taskRouter.delete(
+  "/:taskId",
+  authenticate,
+  checkTaskAccess,
+  requirePermission("task:delete"),
+  deleteTaskController,
+);
+taskRouter.patch(
+  "/:taskId/archive",
+  authenticate,
+  checkTaskAccess,
+  requirePermission("task:archive"),
+  archiveTaskController,
 );
 
 export default taskRouter;

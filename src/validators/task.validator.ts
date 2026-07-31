@@ -22,6 +22,42 @@ const commentSchema = z.object({
     .max(1000, "Comment cannot exceed 1000 characters."),
 });
 
+export const archiveTaskSchema = z.object({
+  params: z.object({
+    taskId: objectIdSchema,
+  }),
+  body: z.object({
+    isArchived: z.boolean().optional(),
+  }),
+});
+
+export const boardIdParamSchema = z.object({
+  params: z.object({
+    boardId: objectIdSchema,
+  }),
+});
+
+export const taskListQuerySchema = z.object({
+  query: z.object({
+    status: z
+      .enum([
+        "todo",
+        "in_progress",
+        "in_review",
+        "testing",
+        "completed",
+        "blocked",
+      ])
+      .optional(),
+    priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+    assignee: objectIdSchema.optional(),
+    isArchived: z
+      .enum(["true", "false"])
+      .optional()
+      .transform((val) => val === "true"),
+  }),
+});
+
 const attachmentSchema = z.object({
   fileName: z.string().min(1, "File name is required."),
   fileUrl: z.string().url("Invalid file URL."),
@@ -99,32 +135,37 @@ export const createTaskSchema = z.object({
 export type CreateTaskSchemaType = z.infer<typeof createTaskSchema>;
 
 export const updateTaskSchema = z.object({
-  title: z.string().trim().min(1).max(200).optional(),
-  description: z.string().trim().max(2000).optional(),
-  column: z.string().trim().min(1).max(100).optional(),
-  assignee: z
-    .string()
-    .regex(/^[0-9a-fA-F]{24}$/)
-    .nullable()
-    .optional(),
-  watchers: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/)).optional(),
-  status: z
-    .enum([
-      "todo",
-      "in_progress",
-      "in_review",
-      "testing",
-      "completed",
-      "blocked",
-    ])
-    .optional(),
-  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
-  tags: z.array(z.string()).optional(),
-  dueDate: z.coerce.date().nullable().optional(),
-  estimatedHours: z.number().min(0).optional(),
-  actualHours: z.number().min(0).optional(),
-  subtasks: z.array(subTaskSchema).optional(),
-  isArchived: z.boolean().optional(),
+  params: z.object({
+    taskId: objectIdSchema,
+  }),
+  body: z.object({
+    title: z.string().trim().min(1).max(200).optional(),
+    description: z.string().trim().max(2000).optional(),
+    column: z.string().trim().min(1).max(100).optional(),
+    assignee: z
+      .string()
+      .regex(/^[0-9a-fA-F]{24}$/)
+      .nullable()
+      .optional(),
+    watchers: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/)).optional(),
+    status: z
+      .enum([
+        "todo",
+        "in_progress",
+        "in_review",
+        "testing",
+        "completed",
+        "blocked",
+      ])
+      .optional(),
+    priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+    tags: z.array(z.string()).optional(),
+    dueDate: z.coerce.date().nullable().optional(),
+    estimatedHours: z.number().min(0).optional(),
+    actualHours: z.number().min(0).optional(),
+    subtasks: z.array(subTaskSchema).optional(),
+    isArchived: z.boolean().optional(),
+  }),
 });
 
 export type UpdateTaskSchemaType = z.infer<typeof updateTaskSchema>;
