@@ -22,16 +22,26 @@ import Board from "../../models/board.model";
 import Task from "../../models/task.model";
 import { CreateRoleInput } from "../../validators/role.validation";
 
+const assertValidObjectIds = (ids: Record<string, string>): void => {
+  for (const [label, id] of Object.entries(ids)) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestError(`Invalid ${label}.`);
+    }
+  }
+};
+
 export const createWorkspaceService = async (
   ownerId: string,
   data: CreateWorkspaceInput,
 ): Promise<IWorkspace> => {
-  const { name, description, color, icon, isPrivate } = data;
+  assertValidObjectIds({ ownerId });
+
+  const trimmedName = data.name.trim();
 
   const existingWorkspace = await Workspace.findOne({
     owner: ownerId,
     name: {
-      $regex: new RegExp(`^${escapeRegex(data.name)}$`, "i"),
+      $regex: new RegExp(`^${escapeRegex(trimmedName)}$`, "i"),
     },
   });
 
@@ -40,11 +50,11 @@ export const createWorkspaceService = async (
   }
 
   const workspace = await Workspace.create({
-    name,
-    description,
-    color,
-    icon,
-    isPrivate,
+    name: trimmedName,
+    description: data.description,
+    color: data.color,
+    icon: data.icon,
+    isPrivate: data.isPrivate,
     owner: new Types.ObjectId(ownerId),
     members: [
       {
@@ -59,6 +69,8 @@ export const createWorkspaceService = async (
 export const getUserWorkspacesService = async (
   userId: string,
 ): Promise<IWorkspace[]> => {
+  assertValidObjectIds({ userId });
+
   const workspaces = await Workspace.find({
     $or: [{ owner: userId }, { "members.user": userId }],
   })
@@ -72,6 +84,8 @@ export const getUserWorkspacesService = async (
 export const getWorkspaceByIdService = async (
   workspaceId: string,
 ): Promise<IWorkspace> => {
+  assertValidObjectIds({ workspaceId });
+
   const workspace = await Workspace.findById(new Types.ObjectId(workspaceId))
     .populate("owner", "name email avatar")
     .populate("members.user", "name email avatar");
@@ -87,27 +101,34 @@ export const updateWorkspaceService = async (
   workspaceId: string,
   data: UpdateWorkspaceInput,
 ): Promise<IWorkspace> => {
+  assertValidObjectIds({ workspaceId });
+
   const workspace = await Workspace.findById(workspaceId);
 
   if (!workspace) {
     throw new NotFoundError("Workspace not found.");
   }
 
-  if (data.name && data.name !== workspace.name) {
-    const existingWorkspace = await Workspace.findOne({
-      owner: workspace.owner,
-      name: {
-        $regex: new RegExp(`^${escapeRegex(data.name)}$`, "i"),
-      },
-      _id: { $ne: workspaceId },
-    });
+  if (data.name?.trim()) {
+    const trimmedName = data.name.trim();
 
-    if (existingWorkspace) {
-      throw new BadRequestError("Workspace with this name already exists.");
+    if (trimmedName.toLowerCase() !== workspace.name.toLowerCase()) {
+      const existingWorkspace = await Workspace.findOne({
+        owner: workspace.owner,
+        name: {
+          $regex: new RegExp(`^${escapeRegex(trimmedName)}$`, "i"),
+        },
+        _id: { $ne: workspaceId },
+      });
+
+      if (existingWorkspace) {
+        throw new BadRequestError("Workspace with this name already exists.");
+      }
     }
+
+    workspace.name = trimmedName;
   }
 
-  if (data.name !== undefined) workspace.name = data.name;
   if (data.description !== undefined) workspace.description = data.description;
   if (data.color !== undefined) workspace.color = data.color;
   if (data.icon !== undefined) workspace.icon = data.icon;
@@ -125,6 +146,8 @@ export const updateWorkspaceService = async (
 export const deleteWorkspaceService = async (
   workspaceId: string,
 ): Promise<void> => {
+  assertValidObjectIds({ workspaceId });
+
   const session = await mongoose.startSession();
 
   try {
@@ -139,6 +162,7 @@ export const deleteWorkspaceService = async (
       await Board.deleteMany({ workspace: workspaceId }).session(session);
       await Sprint.deleteMany({ workspace: workspaceId }).session(session);
       await Project.deleteMany({ workspace: workspaceId }).session(session);
+      await Role.deleteMany({ workspace: workspaceId }).session(session);
       await Workspace.findByIdAndDelete(workspaceId).session(session);
     });
   } finally {
@@ -151,6 +175,8 @@ export const addWorkspaceMemberService = async (
   userId: string,
   role: "admin" | "member",
 ): Promise<IWorkspace> => {
+  assertValidObjectIds({ workspaceId, userId });
+
   const workspace = await Workspace.findById(workspaceId);
 
   if (!workspace) {
@@ -191,6 +217,8 @@ export const updateWorkspaceMemberRoleService = async (
   userId: string,
   role: "admin" | "member",
 ): Promise<IWorkspace> => {
+  assertValidObjectIds({ workspaceId, userId });
+
   const workspace = await Workspace.findById(workspaceId);
 
   if (!workspace) {
@@ -222,6 +250,8 @@ export const removeWorkspaceMemberService = async (
   workspaceId: string,
   userId: string,
 ): Promise<IWorkspace> => {
+  assertValidObjectIds({ workspaceId, userId });
+
   const workspace = await Workspace.findById(workspaceId);
 
   if (!workspace) {
@@ -256,16 +286,20 @@ export const createProjectService = async (
   ownerId: string,
   data: CreateProjectInput,
 ): Promise<IProject> => {
+  assertValidObjectIds({ workspaceId, ownerId });
+
   const workspace = await Workspace.findById(workspaceId);
 
   if (!workspace) {
     throw new NotFoundError("Workspace not found.");
   }
 
+  const trimmedName = data.name.trim();
+
   const exists = await Project.findOne({
     workspace: workspaceId,
     name: {
-      $regex: new RegExp(`^${escapeRegex(data.name)}$`, "i"),
+      $regex: new RegExp(`^${escapeRegex(trimmedName)}$`, "i"),
     },
   });
 
@@ -275,14 +309,18 @@ export const createProjectService = async (
     );
   }
 
-  const ownerRole = await Role.findOne({ name: "Owner" });
+  const ownerRole = await Role.findOne({
+    name: "Owner",
+    isSystem: true,
+    workspace: null,
+  });
 
   if (!ownerRole) {
     throw new NotFoundError("Default Owner role not found.");
   }
 
   const project = await Project.create({
-    name: data.name,
+    name: trimmedName,
     description: data.description,
     color: data.color,
 
@@ -330,6 +368,8 @@ export const createProjectService = async (
 export const getWorkspaceProjectsService = async (
   workspaceId: string,
 ): Promise<IProject[]> => {
+  assertValidObjectIds({ workspaceId });
+
   const workspace = await Workspace.findById(workspaceId);
 
   if (!workspace) {
@@ -346,6 +386,8 @@ export const getProjectByIdService = async (
   workspaceId: string,
   projectId: string,
 ): Promise<IProject> => {
+  assertValidObjectIds({ workspaceId, projectId });
+
   const project = await Project.findOne({
     _id: projectId,
     workspace: workspaceId,
@@ -367,6 +409,8 @@ export const updateProjectService = async (
   projectId: string,
   data: UpdateProjectInput,
 ): Promise<IProject> => {
+  assertValidObjectIds({ workspaceId, projectId });
+
   const project = await Project.findOne({
     _id: projectId,
     workspace: workspaceId,
@@ -376,24 +420,26 @@ export const updateProjectService = async (
     throw new NotFoundError("Project not found.");
   }
 
-  if (data.name && data.name !== project.name) {
-    const exists = await Project.findOne({
-      workspace: workspaceId,
-      name: {
-        $regex: new RegExp(`^${escapeRegex(data.name)}$`, "i"),
-      },
-      _id: { $ne: projectId },
-    });
+  if (data.name?.trim()) {
+    const trimmedName = data.name.trim();
 
-    if (exists) {
-      throw new BadRequestError(
-        "Project with this name already exists in this workspace.",
-      );
+    if (trimmedName.toLowerCase() !== project.name.toLowerCase()) {
+      const exists = await Project.findOne({
+        workspace: workspaceId,
+        name: {
+          $regex: new RegExp(`^${escapeRegex(trimmedName)}$`, "i"),
+        },
+        _id: { $ne: projectId },
+      });
+
+      if (exists) {
+        throw new BadRequestError(
+          "Project with this name already exists in this workspace.",
+        );
+      }
     }
-  }
 
-  if (data.name !== undefined) {
-    project.name = data.name;
+    project.name = trimmedName;
   }
 
   if (data.description !== undefined) {
@@ -461,6 +507,8 @@ export const deleteProjectService = async (
   workspaceId: string,
   projectId: string,
 ): Promise<void> => {
+  assertValidObjectIds({ workspaceId, projectId });
+
   const session = await mongoose.startSession();
 
   try {
@@ -496,6 +544,8 @@ export const deleteProjectService = async (
 export const getWorkspaceRolesService = async (
   workspaceId: string,
 ): Promise<IRole[]> => {
+  assertValidObjectIds({ workspaceId });
+
   return await Role.find({
     $or: [{ workspace: null }, { workspace: workspaceId }],
   }).sort({
@@ -508,6 +558,8 @@ export const createWorkspaceRoleService = async (
   workspaceId: string,
   data: CreateRoleInput,
 ): Promise<IRole> => {
+  assertValidObjectIds({ workspaceId });
+
   const trimmedName = data.name.trim();
   const normalizedName = trimmedName.toLowerCase();
 
