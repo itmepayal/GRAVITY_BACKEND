@@ -49,7 +49,15 @@ export const addProjectMemberService = async (
     throw new NotFoundError("Role not found.");
   }
 
-  if (role.name === "Owner") {
+  if (
+    role.workspace &&
+    role.workspace.toString() !== workspace._id.toString() &&
+    !role.isSystem
+  ) {
+    throw new BadRequestError("Role does not belong to this workspace.");
+  }
+
+  if (role.isSystem && role.name === "Owner") {
     throw new BadRequestError("Owner role cannot be assigned.");
   }
 
@@ -111,7 +119,15 @@ export const updateProjectMemberRoleService = async (
     throw new NotFoundError("Role not found.");
   }
 
-  if (role.name === "Owner") {
+  if (
+    role.workspace &&
+    role.workspace.toString() !== workspace._id.toString() &&
+    !role.isSystem
+  ) {
+    throw new BadRequestError("Role does not belong to this workspace.");
+  }
+
+  if (role.isSystem && role.name === "Owner") {
     throw new BadRequestError("Owner role cannot be assigned.");
   }
 
@@ -186,6 +202,17 @@ export const createSprintService = async (
 ): Promise<ISprint> => {
   const { name, goal, board, startDate, endDate } = data;
 
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    throw new BadRequestError("Invalid sprint dates.");
+  }
+
+  if (start >= end) {
+    throw new BadRequestError("Start date must be before end date.");
+  }
+
   if (board) {
     const boardExists = await Board.findOne({
       _id: board,
@@ -211,7 +238,7 @@ export const createSprintService = async (
   const sprint = await Sprint.create({
     name,
     goal,
-    board: board,
+    board,
     startDate,
     endDate,
     project: projectId,
