@@ -13,6 +13,7 @@ import {
   deleteSprintService,
   startSprintService,
   completeSprintService,
+  getTasksBySprintService,
 } from "./sprint.service";
 
 export const getSprintByIdController = asyncHandler(
@@ -92,6 +93,22 @@ export const completeSprintController = asyncHandler(
       StatusCodes.OK,
       "Sprint completed successfully.",
       sprint,
+    );
+  },
+);
+
+export const getTasksBySprintController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { sprintId } = sprintIdParamSchema.parse({
+      params: req.params,
+    }).params;
+    const result = await getTasksBySprintService(sprintId);
+    logger.info(`Tasks for sprint ${sprintId} fetched successfully.`);
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      "Sprint tasks fetched successfully.",
+      result,
     );
   },
 );

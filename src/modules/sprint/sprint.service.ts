@@ -1,5 +1,6 @@
 import Board from "../../models/board.model";
 import Sprint from "../../models/sprint.model";
+import Task from "../../models/task.model";
 import { BadRequestError, NotFoundError } from "../../utils/errors/app.error";
 import { UpdateSprintInput } from "../../validators/sprint.validation";
 
@@ -96,4 +97,28 @@ export const completeSprintService = async (sprintId: string) => {
   sprint.status = "completed";
   await sprint.save();
   return sprint;
+};
+
+export const getTasksBySprintService = async (sprintId: string) => {
+  const sprint = await Sprint.findById(sprintId);
+
+  if (!sprint) {
+    throw new NotFoundError("Sprint not found");
+  }
+
+  const tasks = await Task.find({
+    sprint: sprint._id,
+    workspace: sprint.workspace,
+    project: sprint.project,
+    ...(sprint.board ? { board: sprint.board } : {}),
+    isArchived: false,
+  })
+    .populate("assignee", "name email avatar")
+    .populate("createdBy", "name email")
+    .sort({ createdAt: -1 });
+
+  return {
+    sprint,
+    tasks,
+  };
 };
