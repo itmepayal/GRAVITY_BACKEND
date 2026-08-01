@@ -11,13 +11,14 @@ const roleRouter = express.Router();
 
 roleRouter.get("/:workspaceId", authenticate, getWorkspaceRolesController);
 roleRouter.patch(
-  "/:roleId",
+  "/:workspaceId/:roleId",
   authenticate,
   attachRoleAndCheckAdminAccess,
   updateWorkspaceRoleController,
 );
+
 roleRouter.delete(
-  "/:roleId",
+  "/:workspaceId/:roleId",
   authenticate,
   attachRoleAndCheckAdminAccess,
   deleteWorkspaceRoleController,

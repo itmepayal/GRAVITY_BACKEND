@@ -16,16 +16,19 @@ import {
 
 export const getWorkspaceRolesController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { roleId } = roleIdParamSchema.parse({
+    const { workspaceId } = getRolesParamSchema.parse({
       params: req.params,
     }).params;
-    const role = await getWorkspaceRolesService(roleId);
-    logger.info(`Role ${roleId} fetched successfully.`);
+
+    const roles = await getWorkspaceRolesService(workspaceId);
+
+    logger.info(`Roles fetched successfully for workspace ${workspaceId}.`);
+
     AppResponse.success(
       res,
       StatusCodes.OK,
-      "Role fetched successfully.",
-      role,
+      "Roles fetched successfully.",
+      roles,
     );
   },
 );
