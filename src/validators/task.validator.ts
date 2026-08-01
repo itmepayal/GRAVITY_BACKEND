@@ -277,3 +277,7 @@ export const removeAttachmentSchema = z.object({
     attachmentId: objectIdSchema,
   }),
 });
+
+export const updateActualHoursSchema = z.object({
+  actualHours: z.number().min(0, "Actual hours cannot be negative"),
+});

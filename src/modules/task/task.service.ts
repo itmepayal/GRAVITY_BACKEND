@@ -482,3 +482,16 @@ export const removeAttachmentService = async (
   await task.save();
   return task;
 };
+
+export const updateActualHoursService = async (
+  taskId: string,
+  actualHours: number,
+) => {
+  const task = await Task.findById(taskId);
+  if (!task) {
+    throw new NotFoundError("Task not found.");
+  }
+  task.actualHours = actualHours;
+  await task.save();
+  return task;
+};

@@ -26,6 +26,7 @@ import {
   updateCommentController,
   addWatcherController,
   removeWatcherController,
+  updateActualHoursController,
 } from "./task.controller";
 import { upload } from "../../middlewares/multer.middleware";
 
@@ -144,6 +145,13 @@ taskRouter.delete(
   checkTaskAccess,
   requirePermission("task:update"),
   removeWatcherController,
+);
+taskRouter.patch(
+  "/:taskId/hours",
+  authenticate,
+  checkTaskAccess,
+  requirePermission("task:update"),
+  updateActualHoursController,
 );
 
 export default taskRouter;

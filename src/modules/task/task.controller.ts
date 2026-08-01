@@ -23,6 +23,7 @@ import {
   removeWatcherSchema,
   addAttachmentSchema,
   removeAttachmentSchema,
+  updateActualHoursSchema,
 } from "../../validators/task.validator";
 import {
   createTaskService,
@@ -43,6 +44,7 @@ import {
   removeWatcherService,
   addAttachmentService,
   removeAttachmentService,
+  updateActualHoursService,
 } from "./task.service";
 import { uploadToCloudinary } from "../../config/cloudinary.config";
 import { IAttachment } from "../../models/task.model";
@@ -451,6 +453,23 @@ export const removeAttachmentController = asyncHandler(
       res,
       StatusCodes.OK,
       "Attachment removed successfully.",
+      task,
+    );
+  },
+);
+
+export const updateActualHoursController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { taskId } = taskIdParamSchema.parse({
+      params: req.params,
+    }).params;
+    const { actualHours } = updateActualHoursSchema.parse(req.body);
+    const task = await updateActualHoursService(taskId, actualHours);
+    logger.info(`Actual hours updated for task ${taskId}.`);
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      "Actual hours updated successfully.",
       task,
     );
   },
