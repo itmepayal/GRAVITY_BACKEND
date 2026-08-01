@@ -16,6 +16,16 @@ import {
   updateTaskController,
   deleteTaskController,
   archiveTaskController,
+  moveTaskController,
+  assignTaskController,
+  addSubTaskController,
+  updateSubTaskController,
+  deleteSubTaskController,
+  addCommentController,
+  deleteCommentController,
+  updateCommentController,
+  addWatcherController,
+  removeWatcherController,
 } from "./task.controller";
 import { upload } from "../../middlewares/multer.middleware";
 
@@ -64,6 +74,76 @@ taskRouter.patch(
   checkTaskAccess,
   requirePermission("task:archive"),
   archiveTaskController,
+);
+taskRouter.patch(
+  "/:taskId/move",
+  authenticate,
+  checkTaskAccess,
+  requirePermission("task:update"),
+  moveTaskController,
+);
+taskRouter.patch(
+  "/:taskId/assignee",
+  authenticate,
+  checkTaskAccess,
+  requirePermission("task:assign"),
+  assignTaskController,
+);
+taskRouter.post(
+  "/:taskId/subtasks",
+  authenticate,
+  checkTaskAccess,
+  requirePermission("task:update"),
+  addSubTaskController,
+);
+taskRouter.patch(
+  "/:taskId/subtasks/:subtaskId",
+  authenticate,
+  checkTaskAccess,
+  requirePermission("task:update"),
+  updateSubTaskController,
+);
+taskRouter.delete(
+  "/:taskId/subtasks/:subtaskId",
+  authenticate,
+  checkTaskAccess,
+  requirePermission("task:update"),
+  deleteSubTaskController,
+);
+taskRouter.post(
+  "/:taskId/comments",
+  authenticate,
+  checkTaskAccess,
+  requirePermission("task:update"),
+  addCommentController,
+);
+taskRouter.patch(
+  "/:taskId/comments/:commentId",
+  authenticate,
+  checkTaskAccess,
+  requirePermission("task:update"),
+  updateCommentController,
+);
+taskRouter.delete(
+  "/:taskId/comments/:commentId",
+  authenticate,
+  checkTaskAccess,
+  requirePermission("task:update"),
+  deleteCommentController,
+);
+taskRouter.post(
+  "/:taskId/watchers",
+  authenticate,
+  checkTaskAccess,
+  requirePermission("task:update"),
+  addWatcherController,
+);
+taskRouter.delete(
+  "/:taskId/watchers/:userId",
+  authenticate,
+  checkTaskAccess,
+  requirePermission("task:update"),
+  removeWatcherController,
 );
 
 export default taskRouter;

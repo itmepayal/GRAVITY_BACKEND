@@ -11,6 +11,18 @@ import {
   taskListQuerySchema,
   updateTaskSchema,
   archiveTaskSchema,
+  moveTaskSchema,
+  assigneeTaskSchema,
+  addSubTaskSchema,
+  deleteSubTaskSchema,
+  updateSubTaskSchema,
+  addCommentSchema,
+  updateCommentSchema,
+  deleteCommentSchema,
+  addWatcherSchema,
+  removeWatcherSchema,
+  addAttachmentSchema,
+  removeAttachmentSchema,
 } from "../../validators/task.validator";
 import {
   createTaskService,
@@ -19,9 +31,22 @@ import {
   updateTaskService,
   deleteTaskService,
   archiveTaskService,
+  assignTaskService,
+  moveTaskService,
+  addSubTaskService,
+  updateSubTaskService,
+  deleteSubTaskService,
+  addCommentService,
+  updateCommentService,
+  deleteCommentService,
+  addWatcherService,
+  removeWatcherService,
+  addAttachmentService,
+  removeAttachmentService,
 } from "./task.service";
 import { uploadToCloudinary } from "../../config/cloudinary.config";
 import { IAttachment } from "../../models/task.model";
+import { BadRequestError } from "../../utils/errors/app.error";
 
 export const createTaskController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
@@ -180,6 +205,252 @@ export const archiveTaskController = asyncHandler(
       res,
       StatusCodes.OK,
       `Task ${task.isArchived ? "archived" : "unarchived"} successfully.`,
+      task,
+    );
+  },
+);
+
+export const moveTaskController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { params, body } = moveTaskSchema.parse({
+      params: req.params,
+      body: req.body,
+    });
+    const task = await moveTaskService(params.taskId, body);
+    logger.info(`Task ${params.taskId} moved successfully.`);
+    AppResponse.success(res, StatusCodes.OK, "Task moved successfully.", task);
+  },
+);
+
+export const assignTaskController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { params, body } = assigneeTaskSchema.parse({
+      params: req.params,
+      body: req.body,
+    });
+    const task = await assignTaskService(params.taskId, body.assignee);
+    logger.info(
+      `Task ${params.taskId} ${body.assignee ? "assigned" : "unassigned"} successfully.`,
+    );
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      `Task ${body.assignee ? "assigned" : "unassigned"} successfully.`,
+      task,
+    );
+  },
+);
+
+export const addSubTaskController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { params, body } = addSubTaskSchema.parse({
+      params: req.params,
+      body: req.body,
+    });
+
+    const task = await addSubTaskService(params.taskId, body.title);
+
+    logger.info(`Subtask added to task ${params.taskId}.`);
+
+    AppResponse.success(
+      res,
+      StatusCodes.CREATED,
+      "Subtask added successfully.",
+      task,
+    );
+  },
+);
+
+export const updateSubTaskController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { params, body } = updateSubTaskSchema.parse({
+      params: req.params,
+      body: req.body,
+    });
+
+    const task = await updateSubTaskService(
+      params.taskId,
+      params.subtaskId,
+      body,
+    );
+
+    logger.info(`Subtask updated successfully.`);
+
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      "Subtask updated successfully.",
+      task,
+    );
+  },
+);
+
+export const deleteSubTaskController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { taskId, subtaskId } = deleteSubTaskSchema.parse({
+      params: req.params,
+    }).params;
+
+    const task = await deleteSubTaskService(taskId, subtaskId);
+
+    logger.info(`Subtask deleted successfully.`);
+
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      "Subtask deleted successfully.",
+      task,
+    );
+  },
+);
+
+export const addCommentController = asyncHandler(async (req, res) => {
+  const userId = req.user!.id;
+  const { params, body } = addCommentSchema.parse({
+    params: req.params,
+    body: req.body,
+  });
+  const task = await addCommentService(params.taskId, userId, body.message);
+  logger.info(`Comment added to task ${params.taskId}.`);
+  AppResponse.success(
+    res,
+    StatusCodes.CREATED,
+    "Comment added successfully.",
+    task,
+  );
+});
+
+export const updateCommentController = asyncHandler(async (req, res) => {
+  const userId = req.user!.id;
+  const { params, body } = updateCommentSchema.parse({
+    params: req.params,
+    body: req.body,
+  });
+  const task = await updateCommentService(
+    params.taskId,
+    params.commentId,
+    userId,
+    body.message,
+  );
+  AppResponse.success(
+    res,
+    StatusCodes.OK,
+    "Comment updated successfully.",
+    task,
+  );
+});
+
+export const deleteCommentController = asyncHandler(async (req, res) => {
+  const userId = req.user!.id;
+
+  const { taskId, commentId } = deleteCommentSchema.parse({
+    params: req.params,
+  }).params;
+
+  const task = await deleteCommentService(taskId, commentId, userId);
+
+  AppResponse.success(
+    res,
+    StatusCodes.OK,
+    "Comment deleted successfully.",
+    task,
+  );
+});
+
+export const addWatcherController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { params, body } = addWatcherSchema.parse({
+      params: req.params,
+      body: req.body,
+    });
+    const task = await addWatcherService(params.taskId, body.userId);
+    logger.info(`Watcher ${body.userId} added to task ${params.taskId}.`);
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      "Watcher added successfully.",
+      task,
+    );
+  },
+);
+
+export const removeWatcherController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { taskId, userId } = removeWatcherSchema.parse({
+      params: req.params,
+    }).params;
+    const task = await removeWatcherService(taskId, userId);
+    logger.info(`Watcher ${userId} removed from task ${taskId}.`);
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      "Watcher removed successfully.",
+      task,
+    );
+  },
+);
+
+export const addAttachmentController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user!.id;
+
+    const { taskId } = addAttachmentSchema.parse({
+      params: req.params,
+    }).params;
+
+    const files = req.files as Express.Multer.File[];
+
+    if (!files?.length) {
+      throw new BadRequestError("Attachment is required.");
+    }
+
+    const attachments: IAttachment[] = [];
+
+    for (const file of files) {
+      const resourceType =
+        file.mimetype === "application/pdf" ? "raw" : "image";
+
+      const uploaded = await uploadToCloudinary(
+        file.path,
+        "tasks",
+        resourceType,
+      );
+
+      attachments.push({
+        fileName: file.originalname,
+        fileUrl: uploaded.url,
+        fileType: file.mimetype,
+        fileSize: file.size,
+        uploadedBy: new Types.ObjectId(userId),
+        uploadedAt: new Date(),
+      } as any);
+    }
+
+    const task = await addAttachmentService(taskId, attachments);
+
+    logger.info(`Attachment added to task ${taskId}.`);
+
+    AppResponse.success(
+      res,
+      StatusCodes.CREATED,
+      "Attachment uploaded successfully.",
+      task,
+    );
+  },
+);
+
+export const removeAttachmentController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { taskId, attachmentId } = removeAttachmentSchema.parse({
+      params: req.params,
+    }).params;
+
+    const task = await removeAttachmentService(taskId, attachmentId);
+
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      "Attachment removed successfully.",
       task,
     );
   },

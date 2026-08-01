@@ -2,6 +2,10 @@ import { z } from "zod";
 
 const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
 
+const objectIdSchema = z
+  .string()
+  .regex(/^[0-9a-fA-F]{24}$/, "Invalid ObjectId.");
+
 export const PROJECT_STATUSES = [
   "planning",
   "active",
@@ -168,3 +172,32 @@ export type ProjectIdParamInput = z.infer<
 export type WorkspaceProjectParamInput = z.infer<
   typeof workspaceProjectParamSchema
 >["params"];
+
+export const getProjectTasksSchema = z.object({
+  params: z.object({
+    projectId: objectIdSchema,
+  }),
+
+  query: z.object({
+    status: z
+      .enum([
+        "todo",
+        "in_progress",
+        "in_review",
+        "testing",
+        "completed",
+        "blocked",
+      ])
+      .optional(),
+
+    priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+
+    assignee: objectIdSchema.optional(),
+
+    isArchived: z.enum(["true", "false"]).optional(),
+  }),
+});
+
+export type GetProjectTasksQuery = z.infer<
+  typeof getProjectTasksSchema
+>["query"];

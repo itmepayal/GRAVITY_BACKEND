@@ -1,6 +1,7 @@
 import {
   addProjectMemberSchema,
   updateProjectMemberRoleSchema,
+  getProjectTasksSchema,
 } from "../../validators/project.validator";
 import {
   addProjectMemberService,
@@ -10,6 +11,7 @@ import {
   listBoardsService,
   createSprintService,
   getProjectSprintsService,
+  getProjectTasksService,
 } from "./project.service";
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
@@ -136,6 +138,23 @@ export const getProjectSprintsController = asyncHandler(
       StatusCodes.OK,
       "Sprints fetched successfully.",
       sprints,
+    );
+  },
+);
+
+export const getProjectTasksController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { params, query } = getProjectTasksSchema.parse({
+      params: req.params,
+      query: req.query,
+    });
+    const tasks = await getProjectTasksService(params.projectId, query);
+    logger.info(`Tasks fetched for project ${params.projectId}.`);
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      "Project tasks fetched successfully.",
+      tasks,
     );
   },
 );

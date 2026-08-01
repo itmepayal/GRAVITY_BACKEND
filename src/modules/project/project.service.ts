@@ -7,6 +7,8 @@ import Workspace from "../../models/workspace.model";
 import Board from "../../models/board.model";
 import { CreateSprintInput } from "../../validators/sprint.validation";
 import Sprint, { ISprint } from "../../models/sprint.model";
+import { GetProjectTasksQuery } from "./project.type";
+import Task from "../../models/task.model";
 
 export const addProjectMemberService = async (
   projectId: string,
@@ -229,4 +231,43 @@ export const getProjectSprintsService = async (projectId: string) => {
     .sort({ createdAt: -1 });
 
   return sprints;
+};
+
+export const getProjectTasksService = async (
+  projectId: string,
+  query: GetProjectTasksQuery,
+) => {
+  const project = await Project.findById(projectId);
+
+  if (!project) {
+    throw new NotFoundError("Project not found.");
+  }
+
+  const filter: Record<string, any> = {
+    project: project._id,
+  };
+
+  if (query.status) {
+    filter.status = query.status;
+  }
+
+  if (query.priority) {
+    filter.priority = query.priority;
+  }
+
+  if (query.assignee) {
+    filter.assignee = new Types.ObjectId(query.assignee);
+  }
+
+  if (query.isArchived !== undefined) {
+    filter.isArchived = query.isArchived === "true";
+  }
+
+  const tasks = await Task.find(filter)
+    .populate("assignee", "name email avatar")
+    .populate("createdBy", "name email avatar")
+    .populate("watchers", "name email avatar")
+    .sort({ createdAt: -1 });
+
+  return tasks;
 };

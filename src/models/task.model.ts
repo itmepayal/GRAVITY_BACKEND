@@ -1,6 +1,7 @@
 import { Document, Schema, Types, model } from "mongoose";
 
 export interface IAttachment {
+  _id?: Types.ObjectId;
   fileName: string;
   fileUrl: string;
   fileType: string;
@@ -10,6 +11,7 @@ export interface IAttachment {
 }
 
 export interface IComment {
+  _id: Types.ObjectId;
   user: Types.ObjectId;
   message: string;
   createdAt: Date;
@@ -17,6 +19,7 @@ export interface IComment {
 }
 
 export interface ISubTask {
+  _id: Types.ObjectId;
   title: string;
   completed: boolean;
 }

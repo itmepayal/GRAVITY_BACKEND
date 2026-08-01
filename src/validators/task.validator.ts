@@ -72,6 +72,32 @@ export const taskIdParamSchema = z.object({
   }),
 });
 
+export const moveTaskSchema = z.object({
+  params: taskIdParamSchema.shape.params,
+  body: z.object({
+    column: z.string().min(1, "Column is required"),
+    status: z
+      .enum([
+        "todo",
+        "in_progress",
+        "in_review",
+        "testing",
+        "completed",
+        "blocked",
+      ])
+      .optional(),
+  }),
+});
+export type MoveTaskSchemaType = z.infer<typeof moveTaskSchema>;
+
+export const assigneeTaskSchema = z.object({
+  params: taskIdParamSchema.shape.params,
+  body: z.object({
+    assignee: z.string().nullable().optional(),
+  }),
+});
+export type AssigneeTaskSchemaType = z.infer<typeof assigneeTaskSchema>;
+
 export const createTaskSchema = z.object({
   title: z
     .string()
@@ -169,3 +195,85 @@ export const updateTaskSchema = z.object({
 });
 
 export type UpdateTaskSchemaType = z.infer<typeof updateTaskSchema>;
+
+export const addSubTaskSchema = z.object({
+  params: z.object({
+    taskId: objectIdSchema,
+  }),
+  body: z.object({
+    title: z.string().trim().min(1).max(200),
+  }),
+});
+
+export const updateSubTaskSchema = z.object({
+  params: z.object({
+    taskId: objectIdSchema,
+    subtaskId: objectIdSchema,
+  }),
+  body: z.object({
+    title: z.string().trim().min(1).max(200).optional(),
+    completed: z.boolean().optional(),
+  }),
+});
+
+export const deleteSubTaskSchema = z.object({
+  params: z.object({
+    taskId: objectIdSchema,
+    subtaskId: objectIdSchema,
+  }),
+});
+
+export const addCommentSchema = z.object({
+  params: z.object({
+    taskId: objectIdSchema,
+  }),
+  body: z.object({
+    message: z.string().trim().min(1).max(1000),
+  }),
+});
+
+export const updateCommentSchema = z.object({
+  params: z.object({
+    taskId: objectIdSchema,
+    commentId: objectIdSchema,
+  }),
+  body: z.object({
+    message: z.string().trim().min(1).max(1000),
+  }),
+});
+
+export const deleteCommentSchema = z.object({
+  params: z.object({
+    taskId: objectIdSchema,
+    commentId: objectIdSchema,
+  }),
+});
+
+export const addWatcherSchema = z.object({
+  params: z.object({
+    taskId: objectIdSchema,
+  }),
+  body: z.object({
+    userId: objectIdSchema,
+  }),
+});
+
+export const removeWatcherSchema = z.object({
+  params: z.object({
+    taskId: objectIdSchema,
+    userId: objectIdSchema,
+  }),
+});
+
+export const addAttachmentSchema = z.object({
+  params: z.object({
+    taskId: objectIdSchema,
+  }),
+});
+
+export const removeAttachmentSchema = z.object({
+  params: z.object({
+    taskId: objectIdSchema,
+    attachmentId: objectIdSchema,
+  }),
+});

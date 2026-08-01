@@ -1,7 +1,9 @@
+import { Types } from "mongoose";
 import Board from "../../models/board.model";
 import Project from "../../models/project.model";
 import Sprint from "../../models/sprint.model";
-import Task from "../../models/task.model";
+import Task, { IAttachment } from "../../models/task.model";
+import User from "../../models/user.model";
 import Workspace from "../../models/workspace.model";
 import { NotFoundError } from "../../utils/errors/app.error";
 import { CreateTaskSchemaType } from "../../validators/task.validator";
@@ -158,5 +160,325 @@ export const archiveTaskService = async (
   task.isArchived = isArchived ?? !task.isArchived;
   await task.save();
 
+  return task;
+};
+
+export const moveTaskService = async (
+  taskId: string,
+  data: { column: string; status?: string },
+) => {
+  const task = await Task.findById(taskId);
+  if (!task) {
+    throw new NotFoundError("Task not found.");
+  }
+
+  task.column = data.column;
+
+  if (data.status) {
+    task.status = data.status as typeof task.status;
+
+    if (data.status === "completed" && !task.completedAt) {
+      task.completedAt = new Date();
+    } else if (data.status !== "completed") {
+      task.completedAt = undefined;
+    }
+  }
+
+  await task.save();
+  return task;
+};
+
+export const assignTaskService = async (
+  taskId: string,
+  assigneeId?: string | null,
+) => {
+  const task = await Task.findById(taskId);
+  if (!task) {
+    throw new NotFoundError("Task not found.");
+  }
+
+  if (assigneeId) {
+    const user = await User.findById(assigneeId);
+    if (!user) {
+      throw new NotFoundError("User not found.");
+    }
+    task.assignee = new Types.ObjectId(assigneeId);
+  } else {
+    task.assignee = undefined;
+  }
+
+  await task.save();
+  return task.populate("assignee", "name email");
+};
+
+export const addSubTaskService = async (taskId: string, title: string) => {
+  const task = await Task.findById(taskId);
+
+  if (!task) {
+    throw new NotFoundError("Task not found.");
+  }
+
+  task.subtasks.push({
+    title,
+    completed: false,
+  } as any);
+
+  await task.save();
+
+  return task;
+};
+
+export const updateSubTaskService = async (
+  taskId: string,
+  subtaskId: string,
+  data: {
+    title?: string;
+    completed?: boolean;
+  },
+) => {
+  const task = await Task.findById(taskId);
+
+  if (!task) {
+    throw new NotFoundError("Task not found.");
+  }
+
+  const subtask = task.subtasks.find(
+    (item) => item._id.toString() === subtaskId,
+  );
+
+  if (!subtask) {
+    throw new NotFoundError("Subtask not found.");
+  }
+
+  if (data.title !== undefined) {
+    subtask.title = data.title;
+  }
+
+  if (data.completed !== undefined) {
+    subtask.completed = data.completed;
+  }
+
+  await task.save();
+
+  return task;
+};
+
+export const deleteSubTaskService = async (
+  taskId: string,
+  subtaskId: string,
+) => {
+  const task = await Task.findById(taskId);
+
+  if (!task) {
+    throw new NotFoundError("Task not found.");
+  }
+
+  const index = task.subtasks.findIndex(
+    (item) => item._id.toString() === subtaskId,
+  );
+
+  if (index === -1) {
+    throw new NotFoundError("Subtask not found.");
+  }
+
+  task.subtasks.splice(index, 1);
+
+  await task.save();
+
+  return task;
+};
+
+export const addCommentService = async (
+  taskId: string,
+  userId: string,
+  message: string,
+) => {
+  const task = await Task.findById(taskId);
+
+  if (!task) {
+    throw new NotFoundError("Task not found.");
+  }
+
+  task.comments.push({
+    user: new Types.ObjectId(userId),
+    message,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as any);
+
+  await task.save();
+
+  return task.populate("comments.user", "name email");
+};
+
+export const updateCommentService = async (
+  taskId: string,
+  commentId: string,
+  userId: string,
+  message: string,
+) => {
+  const task = await Task.findById(taskId);
+
+  if (!task) {
+    throw new NotFoundError("Task not found.");
+  }
+
+  const comment = task.comments.find(
+    (item) => item._id.toString() === commentId,
+  );
+
+  if (!comment) {
+    throw new NotFoundError("Comment not found.");
+  }
+
+  if (comment.user.toString() !== userId) {
+    throw new NotFoundError("You can edit only your own comments.");
+  }
+
+  comment.message = message;
+  comment.updatedAt = new Date();
+
+  await task.save();
+
+  return task.populate("comments.user", "name email");
+};
+
+export const deleteCommentService = async (
+  taskId: string,
+  commentId: string,
+  userId: string,
+) => {
+  const task = await Task.findById(taskId);
+
+  if (!task) {
+    throw new NotFoundError("Task not found.");
+  }
+
+  const index = task.comments.findIndex(
+    (item) => item._id.toString() === commentId,
+  );
+
+  if (index === -1) {
+    throw new NotFoundError("Comment not found.");
+  }
+
+  if (task.comments[index].user.toString() !== userId) {
+    throw new NotFoundError("You can delete only your own comments.");
+  }
+
+  task.comments.splice(index, 1);
+
+  await task.save();
+
+  return task.populate("comments.user", "name email");
+};
+
+export const addWatcherService = async (taskId: string, userId: string) => {
+  const task = await Task.findById(taskId);
+
+  if (!task) {
+    throw new NotFoundError("Task not found.");
+  }
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new NotFoundError("User not found.");
+  }
+
+  const workspace = await Workspace.findById(task.workspace);
+
+  if (!workspace) {
+    throw new NotFoundError("Workspace not found.");
+  }
+
+  const isWorkspaceMember = workspace.members.some(
+    (member) => member.user.toString() === userId,
+  );
+
+  if (!isWorkspaceMember) {
+    throw new NotFoundError("User is not a member of this workspace.");
+  }
+
+  const project = await Project.findById(task.project);
+
+  if (!project) {
+    throw new NotFoundError("Project not found.");
+  }
+
+  const isProjectMember = project.members.some(
+    (member) => member.user.toString() === userId,
+  );
+
+  if (!isProjectMember) {
+    throw new NotFoundError("User is not a member of this project.");
+  }
+
+  const alreadyWatcher = task.watchers.some(
+    (watcher) => watcher.toString() === userId,
+  );
+
+  if (alreadyWatcher) {
+    return task.populate("watchers", "name email");
+  }
+
+  task.watchers.push(new Types.ObjectId(userId));
+
+  await task.save();
+
+  return task.populate("watchers", "name email");
+};
+
+export const removeWatcherService = async (taskId: string, userId: string) => {
+  const task = await Task.findById(taskId);
+
+  if (!task) {
+    throw new NotFoundError("Task not found.");
+  }
+
+  const index = task.watchers.findIndex(
+    (watcher) => watcher.toString() === userId,
+  );
+
+  if (index === -1) {
+    throw new NotFoundError("Watcher not found.");
+  }
+
+  task.watchers.splice(index, 1);
+
+  await task.save();
+
+  return task.populate("watchers", "name email");
+};
+
+export const addAttachmentService = async (
+  taskId: string,
+  attachments: IAttachment[],
+) => {
+  const task = await Task.findById(taskId);
+  if (!task) {
+    throw new NotFoundError("Task not found.");
+  }
+  task.attachments.push(...attachments);
+  await task.save();
+  return task.populate("attachments.uploadedBy", "name email");
+};
+
+export const removeAttachmentService = async (
+  taskId: string,
+  attachmentId: string,
+) => {
+  const task = await Task.findById(taskId);
+  if (!task) {
+    throw new NotFoundError("Task not found.");
+  }
+  const index = task.attachments.findIndex(
+    (attachment) => attachment._id?.toString() === attachmentId,
+  );
+  if (index === -1) {
+    throw new NotFoundError("Attachment not found.");
+  }
+  task.attachments.splice(index, 1);
+  await task.save();
   return task;
 };

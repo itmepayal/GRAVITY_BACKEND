@@ -12,6 +12,7 @@ import {
   listBoardsController,
   createSprintController,
   getProjectSprintsController,
+  getProjectTasksController,
 } from "./project.controller";
 
 const projectRouter = express.Router();
@@ -64,6 +65,13 @@ projectRouter.get(
   checkProjectAccess,
   requirePermission("sprint:view"),
   getProjectSprintsController,
+);
+projectRouter.get(
+  "/:projectId/tasks",
+  authenticate,
+  checkProjectAccess,
+  requirePermission("task:view"),
+  getProjectTasksController,
 );
 
 export default projectRouter;
