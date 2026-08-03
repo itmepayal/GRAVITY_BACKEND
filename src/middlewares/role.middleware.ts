@@ -1,6 +1,11 @@
 import { Request, Response, NextFunction } from "express";
+import { Types } from "mongoose";
 import Role from "../models/role.model";
-import { NotFoundError, ForbiddenError } from "../utils/errors/app.error";
+import {
+  NotFoundError,
+  ForbiddenError,
+  BadRequestError,
+} from "../utils/errors/app.error";
 import {
   checkWorkspaceAccess,
   requireWorkspaceAdmin,
@@ -12,7 +17,11 @@ export const attachRoleAndCheckAdminAccess = async (
   next: NextFunction,
 ) => {
   try {
-    const { roleId } = req.params;
+    const { roleId, workspaceId } = req.params;
+
+    if (!Types.ObjectId.isValid(roleId)) {
+      throw new BadRequestError("Invalid role id.");
+    }
 
     const role = await Role.findById(roleId);
 
@@ -20,16 +29,26 @@ export const attachRoleAndCheckAdminAccess = async (
       throw new NotFoundError("Role not found.");
     }
 
-    if (role.isSystem || !role.workspace) {
-      throw new ForbiddenError("System roles cannot be modified or deleted.");
+    if (!role.workspace || role.workspace.toString() !== workspaceId) {
+      throw new NotFoundError("Role not found in this workspace.");
     }
 
     req.role = role;
-    req.params.workspaceId = role.workspace.toString();
 
     return checkWorkspaceAccess(req, res, (err?: any) => {
       if (err) return next(err);
-      return requireWorkspaceAdmin(req, res, next);
+
+      return requireWorkspaceAdmin(req, res, (err2?: any) => {
+        if (err2) return next(err2);
+
+        if (role.isSystem) {
+          return next(
+            new ForbiddenError("System roles cannot be modified or deleted."),
+          );
+        }
+
+        return next();
+      });
     });
   } catch (error) {
     next(error);
