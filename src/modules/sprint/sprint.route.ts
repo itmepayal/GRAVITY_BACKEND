@@ -8,6 +8,7 @@ import {
   deleteSprintController,
   startSprintController,
   completeSprintController,
+  getTasksBySprintController,
 } from "./sprint.controller";
 
 const sprintRouter = express.Router();
@@ -18,6 +19,14 @@ sprintRouter.get(
   checkSprintAccess,
   requirePermission("sprint:view"),
   getSprintByIdController,
+);
+
+sprintRouter.get(
+  "/:sprintId/tasks",
+  authenticate,
+  checkSprintAccess,
+  requirePermission("sprint:view"),
+  getTasksBySprintController,
 );
 
 sprintRouter.patch(

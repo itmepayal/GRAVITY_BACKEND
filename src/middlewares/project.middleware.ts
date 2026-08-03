@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import Project from "../models/project.model";
+import Workspace from "../models/workspace.model";
 import type { IRole } from "../models/role.model";
 import { ForbiddenError, NotFoundError } from "../utils/errors/app.error";
 
@@ -25,6 +26,28 @@ export const checkProjectAccess = async (
       return next();
     }
 
+    const workspace = await Workspace.findById(project.workspace);
+    if (!workspace) {
+      throw new NotFoundError("Workspace not found.");
+    }
+
+    if (workspace.owner.toString() === userId) {
+      req.projectPermissions = ["*"];
+      return next();
+    }
+
+    const wsMembership = workspace.members.find(
+      (member) => member.user.toString() === userId,
+    );
+
+    if (
+      wsMembership &&
+      (wsMembership.role === "owner" || wsMembership.role === "admin")
+    ) {
+      req.projectPermissions = ["*"];
+      return next();
+    }
+
     const membership = project.members.find(
       (member) => member.user.toString() === userId,
     );
@@ -35,8 +58,8 @@ export const checkProjectAccess = async (
 
     const role = membership.role as unknown as IRole;
 
-    if (role.name === "Owner") {
-      throw new ForbiddenError("Invalid role assignment detected.");
+    if (!role) {
+      throw new ForbiddenError("Assigned role no longer exists.");
     }
 
     req.projectPermissions = role.permissions;
