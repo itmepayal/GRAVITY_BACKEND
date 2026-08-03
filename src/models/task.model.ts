@@ -4,6 +4,7 @@ export interface IAttachment {
   _id?: Types.ObjectId;
   fileName: string;
   fileUrl: string;
+  publicId: string;
   fileType: string;
   fileSize: number;
   uploadedBy: Types.ObjectId;
@@ -193,6 +194,7 @@ const taskSchema = new Schema<ITask>(
           trim: true,
         },
       },
+      { timestamps: true },
     ],
 
     attachments: [
@@ -204,6 +206,10 @@ const taskSchema = new Schema<ITask>(
         fileUrl: {
           type: String,
           required: true,
+        },
+        publicId: {
+          type: String,
+          default: "",
         },
         fileType: {
           type: String,

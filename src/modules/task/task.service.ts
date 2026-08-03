@@ -5,7 +5,7 @@ import Sprint from "../../models/sprint.model";
 import Task, { IAttachment } from "../../models/task.model";
 import User from "../../models/user.model";
 import Workspace from "../../models/workspace.model";
-import { NotFoundError } from "../../utils/errors/app.error";
+import { NotFoundError, BadRequestError } from "../../utils/errors/app.error";
 import { CreateTaskSchemaType } from "../../validators/task.validator";
 import { UPDATABLE_TASK_FIELDS } from "./task.constant";
 import { TaskListFilters } from "./task.types";
@@ -172,6 +172,12 @@ export const moveTaskService = async (
     throw new NotFoundError("Task not found.");
   }
 
+  const board = await Board.findById(task.board);
+
+  if (!board || !board.columns.includes(data.column)) {
+    throw new BadRequestError("Invalid column for this board.");
+  }
+
   task.column = data.column;
 
   if (data.status) {
@@ -202,6 +208,20 @@ export const assignTaskService = async (
     if (!user) {
       throw new NotFoundError("User not found.");
     }
+
+    const project = await Project.findById(task.project);
+    if (!project) {
+      throw new NotFoundError("Project not found.");
+    }
+
+    const isProjectMember = project.members.some(
+      (member) => member.user.toString() === assigneeId,
+    );
+
+    if (!isProjectMember) {
+      throw new NotFoundError("User is not a member of this project.");
+    }
+
     task.assignee = new Types.ObjectId(assigneeId);
   } else {
     task.assignee = undefined;
@@ -332,11 +352,10 @@ export const updateCommentService = async (
   }
 
   if (comment.user.toString() !== userId) {
-    throw new NotFoundError("You can edit only your own comments.");
+    throw new ForbiddenError("You can only edit your own comment.");
   }
 
   comment.message = message;
-  comment.updatedAt = new Date();
 
   await task.save();
 

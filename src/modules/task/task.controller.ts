@@ -141,29 +141,44 @@ export const updateTaskController = asyncHandler(
       params: req.params,
       body: req.body,
     });
+
     const files = req.files as Express.Multer.File[];
     let attachments: IAttachment[] | undefined;
+
     if (files?.length) {
       const userId = new Types.ObjectId(req.user!.id);
+
       attachments = await Promise.all(
         files.map(async (file) => {
-          const result = await uploadToCloudinary(file.path);
+          const resourceType =
+            file.mimetype === "application/pdf" ? "raw" : "image";
+
+          const uploaded = await uploadToCloudinary(
+            file.path,
+            "tasks",
+            resourceType,
+          );
+
           return {
             fileName: file.originalname,
-            fileUrl: result.url,
-            fileType: result.format,
-            fileSize: result.bytes,
+            fileUrl: uploaded.url,
+            publicId: uploaded.publicId,
+            fileType: file.mimetype,
+            fileSize: file.size,
             uploadedBy: userId,
             uploadedAt: new Date(),
           };
         }),
       );
     }
+
     const task = await updateTaskService(params.taskId, {
       ...body,
       ...(attachments && { attachments }),
     });
+
     logger.info(`Task ${params.taskId} updated successfully.`);
+
     AppResponse.success(
       res,
       StatusCodes.OK,
@@ -322,25 +337,30 @@ export const addCommentController = asyncHandler(async (req, res) => {
   );
 });
 
-export const updateCommentController = asyncHandler(async (req, res) => {
-  const userId = req.user!.id;
-  const { params, body } = updateCommentSchema.parse({
-    params: req.params,
-    body: req.body,
-  });
-  const task = await updateCommentService(
-    params.taskId,
-    params.commentId,
-    userId,
-    body.message,
-  );
-  AppResponse.success(
-    res,
-    StatusCodes.OK,
-    "Comment updated successfully.",
-    task,
-  );
-});
+export const updateCommentController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user!.id;
+
+    const { params, body } = updateCommentSchema.parse({
+      params: req.params,
+      body: req.body,
+    });
+
+    const task = await updateCommentService(
+      params.taskId,
+      params.commentId,
+      userId,
+      body.message,
+    );
+
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      "Comment updated successfully.",
+      task,
+    );
+  },
+);
 
 export const deleteCommentController = asyncHandler(async (req, res) => {
   const userId = req.user!.id;
