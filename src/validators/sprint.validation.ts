@@ -10,9 +10,9 @@ export const createSprintSchema = z
 
     goal: z
       .string()
-      .trim()
-      .max(500, "Goal cannot exceed 500 characters.")
-      .optional(),
+      .regex(/^[0-9a-fA-F]{24}$/, "Invalid goal id.")
+      .optional()
+      .nullable(),
 
     board: z
       .string()
@@ -51,9 +51,9 @@ export const updateSprintSchema = z
 
     goal: z
       .string()
-      .trim()
-      .max(500, "Goal cannot exceed 500 characters.")
-      .optional(),
+      .regex(/^[0-9a-fA-F]{24}$/, "Invalid goal id.")
+      .optional()
+      .nullable(),
 
     board: z
       .string()

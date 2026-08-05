@@ -5,7 +5,7 @@ export interface ISprint extends Document {
   workspace: Types.ObjectId;
   project: Types.ObjectId;
   board?: Types.ObjectId;
-  goal?: string;
+  goal?: Types.ObjectId;
   startDate: Date;
   endDate: Date;
   status: "planned" | "active" | "completed";
@@ -37,8 +37,9 @@ const sprintSchema = new Schema<ISprint>(
       default: null,
     },
     goal: {
-      type: String,
-      default: "",
+      type: Schema.Types.ObjectId,
+      ref: "Goal",
+      default: null,
     },
     startDate: {
       type: Date,

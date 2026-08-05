@@ -25,6 +25,7 @@ export interface IUser extends Document {
   comparePassword(candidatePassword: string): Promise<boolean>;
   compareOtp(candidateOtp: string): Promise<boolean>;
   compareTwoFAOTP(candidateOtp: string): Promise<boolean>;
+  compareResetPasswordOTP(candidateOTP: string): Promise<boolean>;
 }
 
 const userSchema = new Schema<IUser>(
@@ -167,6 +168,10 @@ userSchema.pre("save", async function (next) {
     );
   }
 
+  if (this.isModified("resetPasswordOTP") && this.resetPasswordOTP) {
+    this.resetPasswordOTP = await bcrypt.hash(this.resetPasswordOTP, 10);
+  }
+
   if (this.isModified("twoFAotp") && this.twoFAotp) {
     this.twoFAotp = await bcrypt.hash(this.twoFAotp, 10);
   }
@@ -191,6 +196,13 @@ userSchema.methods.compareTwoFAOTP = async function (
 ): Promise<boolean> {
   if (!this.twoFAotp) return false;
   return bcrypt.compare(candidateOtp, this.twoFAotp);
+};
+
+userSchema.methods.compareResetPasswordOTP = async function (
+  otp: string,
+): Promise<boolean> {
+  if (!this.resetPasswordOTP) return false;
+  return bcrypt.compare(otp, this.resetPasswordOTP);
 };
 
 const User = model<IUser>("User", userSchema);

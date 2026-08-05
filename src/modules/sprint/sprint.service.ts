@@ -1,4 +1,5 @@
 import Board from "../../models/board.model";
+import Goal from "../../models/goal.model";
 import Sprint from "../../models/sprint.model";
 import Task from "../../models/task.model";
 import { BadRequestError, NotFoundError } from "../../utils/errors/app.error";
@@ -7,7 +8,8 @@ import { UpdateSprintInput } from "../../validators/sprint.validation";
 export const getSprintByIdService = async (sprintId: string) => {
   const sprint = await Sprint.findById(sprintId)
     .populate("createdBy", "name email")
-    .populate("board", "name");
+    .populate("board", "name")
+    .populate("goal", "title status progress");
 
   if (!sprint) {
     throw new NotFoundError("Sprint not found.");
@@ -47,6 +49,18 @@ export const updateSprintService = async (
 
     if (!boardExists) {
       throw new NotFoundError("Board not found in this project.");
+    }
+  }
+
+  if (data.goal) {
+    const goalExists = await Goal.findOne({
+      _id: data.goal,
+      workspace: sprint.workspace,
+      project: sprint.project,
+    });
+
+    if (!goalExists) {
+      throw new NotFoundError("Goal not found in this project.");
     }
   }
 

@@ -20,6 +20,8 @@ import { escapeRegex } from "../../utils/helpers/regex";
 import Sprint from "../../models/sprint.model";
 import Board from "../../models/board.model";
 import Task from "../../models/task.model";
+import Goal from "../../models/goal.model";
+import Team from "../../models/team.model";
 import { CreateRoleInput } from "../../validators/role.validation";
 
 const assertValidObjectIds = (ids: Record<string, string>): void => {
@@ -161,6 +163,12 @@ export const deleteWorkspaceService = async (
       await Task.deleteMany({ workspace: workspaceId }).session(session);
       await Board.deleteMany({ workspace: workspaceId }).session(session);
       await Sprint.deleteMany({ workspace: workspaceId }).session(session);
+      await Goal.deleteMany({
+        workspace: workspaceId,
+      }).session(session);
+      await Team.deleteMany({
+        workspace: workspaceId,
+      }).session(session);
       await Project.deleteMany({ workspace: workspaceId }).session(session);
       await Role.deleteMany({ workspace: workspaceId }).session(session);
       await Workspace.findByIdAndDelete(workspaceId).session(session);
@@ -531,6 +539,10 @@ export const deleteProjectService = async (
         project: projectId,
       }).session(session);
       await Sprint.deleteMany({
+        workspace: workspaceId,
+        project: projectId,
+      }).session(session);
+      await Goal.deleteMany({
         workspace: workspaceId,
         project: projectId,
       }).session(session);

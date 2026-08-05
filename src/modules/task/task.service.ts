@@ -5,10 +5,15 @@ import Sprint from "../../models/sprint.model";
 import Task, { IAttachment } from "../../models/task.model";
 import User from "../../models/user.model";
 import Workspace from "../../models/workspace.model";
-import { NotFoundError, BadRequestError } from "../../utils/errors/app.error";
+import {
+  NotFoundError,
+  BadRequestError,
+  ForbiddenError,
+} from "../../utils/errors/app.error";
 import { CreateTaskSchemaType } from "../../validators/task.validator";
 import { UPDATABLE_TASK_FIELDS } from "./task.constant";
 import { TaskListFilters } from "./task.types";
+import { deleteFromCloudinary } from "../../config/cloudinary.config";
 
 export const createTaskService = async (
   userId: string,
@@ -488,17 +493,29 @@ export const removeAttachmentService = async (
   attachmentId: string,
 ) => {
   const task = await Task.findById(taskId);
+
   if (!task) {
     throw new NotFoundError("Task not found.");
   }
+
   const index = task.attachments.findIndex(
     (attachment) => attachment._id?.toString() === attachmentId,
   );
+
   if (index === -1) {
     throw new NotFoundError("Attachment not found.");
   }
+
+  const attachment = task.attachments[index];
+
+  if (attachment.publicId) {
+    await deleteFromCloudinary(attachment.publicId);
+  }
+
   task.attachments.splice(index, 1);
+
   await task.save();
+
   return task;
 };
 

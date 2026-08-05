@@ -6,10 +6,16 @@ import {
   updateWorkspaceRoleController,
   deleteWorkspaceRoleController,
 } from "./role.controller";
+import { checkWorkspaceAccess } from "../../middlewares/workspace.middleware";
 
 const roleRouter = express.Router();
 
-roleRouter.get("/:workspaceId", authenticate, getWorkspaceRolesController);
+roleRouter.get(
+  "/:workspaceId",
+  authenticate,
+  checkWorkspaceAccess,
+  getWorkspaceRolesController,
+);
 roleRouter.patch(
   "/:workspaceId/:roleId",
   authenticate,

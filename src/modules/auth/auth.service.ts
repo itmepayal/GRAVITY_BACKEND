@@ -222,11 +222,13 @@ export const resetPasswordService = async (
     throw new NotFoundError("User not found.");
   }
 
-  if (
-    !user.resetPasswordOTP ||
-    !user.resetPasswordOTPExpires ||
-    user.resetPasswordOTP !== otp
-  ) {
+  if (!user.resetPasswordOTP || !user.resetPasswordOTPExpires) {
+    throw new BadRequestError("Invalid OTP.");
+  }
+
+  const isValidOTP = await user.compareResetPasswordOTP(otp);
+
+  if (!isValidOTP) {
     throw new BadRequestError("Invalid OTP.");
   }
 

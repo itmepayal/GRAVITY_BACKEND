@@ -9,6 +9,7 @@ import { CreateSprintInput } from "../../validators/sprint.validation";
 import Sprint, { ISprint } from "../../models/sprint.model";
 import { GetProjectTasksQuery } from "./project.type";
 import Task from "../../models/task.model";
+import Goal from "../../models/goal.model";
 
 export const addProjectMemberService = async (
   projectId: string,
@@ -215,8 +216,9 @@ export const createSprintService = async (
 
   if (board) {
     const boardExists = await Board.findOne({
-      _id: board,
-      project: projectId,
+      _id: new Types.ObjectId(board),
+      workspace: new Types.ObjectId(workspaceId),
+      project: new Types.ObjectId(projectId),
     });
 
     if (!boardExists) {
@@ -224,8 +226,20 @@ export const createSprintService = async (
     }
   }
 
+  if (goal) {
+    const goalExists = await Goal.findOne({
+      _id: new Types.ObjectId(goal),
+      workspace: new Types.ObjectId(workspaceId),
+      project: new Types.ObjectId(projectId),
+    });
+
+    if (!goalExists) {
+      throw new NotFoundError("Goal not found in this project.");
+    }
+  }
+
   const activeSprint = await Sprint.findOne({
-    project: projectId,
+    project: new Types.ObjectId(projectId),
     status: "active",
   });
 
@@ -235,17 +249,23 @@ export const createSprintService = async (
     );
   }
 
-  const sprint = await Sprint.create({
+  const sprintData: Partial<ISprint> = {
     name,
-    goal,
-    board,
-    startDate,
-    endDate,
-    project: projectId,
-    workspace: workspaceId,
-    createdBy: userId,
-  });
+    workspace: new Types.ObjectId(workspaceId),
+    project: new Types.ObjectId(projectId),
+    startDate: start,
+    endDate: end,
+    createdBy: new Types.ObjectId(userId),
+  };
 
+  if (board) {
+    sprintData.board = new Types.ObjectId(board);
+  }
+
+  if (goal) {
+    sprintData.goal = new Types.ObjectId(goal);
+  }
+  const sprint = await Sprint.create(sprintData);
   return sprint;
 };
 
