@@ -30,12 +30,15 @@ const goalSchema = new Schema<IGoal>(
       type: String,
       required: true,
       trim: true,
+      minlength: 2,
+      maxlength: 100,
     },
 
     description: {
       type: String,
       default: "",
       trim: true,
+      maxlength: 1000,
     },
 
     workspace: {
@@ -92,10 +95,22 @@ const goalSchema = new Schema<IGoal>(
   },
 );
 
-goalSchema.index({ workspace: 1 });
 goalSchema.index({ project: 1 });
 goalSchema.index({ owner: 1 });
 goalSchema.index({ status: 1 });
+goalSchema.index(
+  {
+    workspace: 1,
+    title: 1,
+  },
+  {
+    unique: true,
+    collation: {
+      locale: "en",
+      strength: 2,
+    },
+  },
+);
 
 goalSchema.set("toJSON", {
   transform: (_doc, ret: any) => {

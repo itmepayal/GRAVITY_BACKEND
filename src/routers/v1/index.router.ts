@@ -8,6 +8,7 @@ import sprintRouter from "../../modules/sprint/sprint.route";
 import roleRouter from "../../modules/role/role.route";
 import taskRouter from "../../modules/task/task.route";
 import teamRouter from "../../modules/team/team.route";
+import goalRouter from "../../modules/goal/goal.router";
 
 const v1Router = express.Router();
 
@@ -29,5 +30,6 @@ v1Router.use("/sprints", sprintRouter);
 v1Router.use("/roles", roleRouter);
 v1Router.use("/tasks", taskRouter);
 v1Router.use("/teams", teamRouter);
+v1Router.use("/goals", goalRouter);
 
 export default v1Router;

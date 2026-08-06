@@ -5,6 +5,7 @@ import { ISprint } from "../models/sprint.model";
 import { IRole } from "../models/role.model";
 import { IComment, ITask } from "../models/task.model";
 import { ITeam } from "../models/team.model";
+import { IGoal } from "../models/goal.model";
 
 declare global {
   namespace Express {
@@ -32,6 +33,9 @@ declare global {
 
       team?: ITeam;
       teamPermissions?: string[];
+
+      goal?: IGoal;
+      goalPermissions?: string[];
     }
   }
 }
