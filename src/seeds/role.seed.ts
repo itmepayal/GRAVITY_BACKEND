@@ -55,6 +55,15 @@ const systemRoles = [
       "task:watch",
       "task:attachment",
       "task:hours",
+
+      // Teams
+      "team:create",
+      "team:view",
+      "team:update",
+      "team:delete",
+      "team:members:add",
+      "team:members:remove",
+      "team:lead:change",
     ],
     isSystem: true,
   },
@@ -83,6 +92,9 @@ const systemRoles = [
       // Optional
       "task:assign",
       "task:archive",
+
+      // Team
+      "team:view",
     ],
     isSystem: true,
   },
@@ -96,6 +108,7 @@ const systemRoles = [
       "board:view",
       "sprint:view",
       "task:view",
+      "team:view",
     ],
     isSystem: true,
   },

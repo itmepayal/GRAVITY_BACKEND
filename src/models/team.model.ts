@@ -28,12 +28,15 @@ const teamSchema = new Schema<ITeam>(
       type: String,
       required: true,
       trim: true,
+      minlength: 2,
+      maxlength: 100,
     },
 
     description: {
       type: String,
       default: "",
       trim: true,
+      maxlength: 500,
     },
 
     workspace: {
@@ -82,6 +85,20 @@ const teamSchema = new Schema<ITeam>(
 teamSchema.index({ workspace: 1 });
 teamSchema.index({ lead: 1 });
 teamSchema.index({ "members.user": 1 });
+
+teamSchema.index(
+  {
+    workspace: 1,
+    name: 1,
+  },
+  {
+    unique: true,
+    collation: {
+      locale: "en",
+      strength: 2,
+    },
+  },
+);
 
 teamSchema.set("toJSON", {
   transform: (_doc, ret: any) => {

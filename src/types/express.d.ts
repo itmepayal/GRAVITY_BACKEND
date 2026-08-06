@@ -1,9 +1,10 @@
+import { JWTPayload } from ".";
 import type { IWorkspace } from "../models/workspace.model";
 import type { IProject } from "../models/project.model";
-import { JWTPayload } from ".";
 import { ISprint } from "../models/sprint.model";
 import { IRole } from "../models/role.model";
 import { IComment, ITask } from "../models/task.model";
+import { ITeam } from "../models/team.model";
 
 declare global {
   namespace Express {
@@ -28,6 +29,9 @@ declare global {
       task?: ITask;
 
       comment?: IComment;
+
+      team?: ITeam;
+      teamPermissions?: string[];
     }
   }
 }
