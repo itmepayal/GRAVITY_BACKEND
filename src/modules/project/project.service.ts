@@ -197,11 +197,13 @@ export const listBoardsService = async (projectId: string) => {
 
 export const createSprintService = async (
   data: CreateSprintInput,
-  projectId: string,
-  workspaceId: string,
+  project: IProject,
   userId: string,
 ): Promise<ISprint> => {
   const { name, goal, board, startDate, endDate } = data;
+
+  const projectId = project._id.toString();
+  const workspaceId = project.workspace.toString();
 
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -265,6 +267,7 @@ export const createSprintService = async (
   if (goal) {
     sprintData.goal = new Types.ObjectId(goal);
   }
+
   const sprint = await Sprint.create(sprintData);
   return sprint;
 };
