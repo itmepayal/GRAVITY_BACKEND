@@ -107,17 +107,12 @@ export const listBoardsController = asyncHandler(
 
 export const createSprintController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { projectId } = req.params;
-    const workspaceId = req.project!.workspace.toString();
     const userId = req.user!.id;
     const body = createSprintSchema.parse(req.body);
-    const sprint = await createSprintService(
-      body,
-      projectId,
-      workspaceId,
-      userId,
+    const sprint = await createSprintService(body, req.project!, userId);
+    logger.info(
+      `Sprint created in project ${req.project!._id} by user ${userId}.`,
     );
-    logger.info(`Sprint created in project ${projectId} by user ${userId}.`);
     AppResponse.success(
       res,
       StatusCodes.CREATED,
