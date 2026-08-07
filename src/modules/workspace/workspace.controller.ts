@@ -69,7 +69,8 @@ export const getUserWorkspacesController = asyncHandler(
 export const getWorkspaceByIdController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { workspaceId } = req.params;
-    const workspace = await getWorkspaceByIdService(workspaceId);
+    const userId = req.user!.id;
+    const workspace = await getWorkspaceByIdService(workspaceId, userId);
     logger.info(`Workspace ${workspaceId} fetched successfully.`);
     AppResponse.success(
       res,

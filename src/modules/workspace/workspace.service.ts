@@ -85,18 +85,26 @@ export const getUserWorkspacesService = async (
 
 export const getWorkspaceByIdService = async (
   workspaceId: string,
-): Promise<IWorkspace> => {
-  assertValidObjectIds({ workspaceId });
-
+  userId: string,
+) => {
+  assertValidObjectIds({
+    workspaceId,
+    userId,
+  });
   const workspace = await Workspace.findById(new Types.ObjectId(workspaceId))
     .populate("owner", "name email avatar")
     .populate("members.user", "name email avatar");
-
   if (!workspace) {
     throw new NotFoundError("Workspace not found.");
   }
-
-  return workspace;
+  const member = workspace.members.find(
+    (member) => member.user._id.toString() === userId,
+  );
+  const role = member?.role ?? "member";
+  return {
+    ...workspace.toObject(),
+    role,
+  };
 };
 
 export const updateWorkspaceService = async (
