@@ -83,3 +83,11 @@ export const changeProfileService = async (
   await user.save();
   return user;
 };
+
+export const getAllUsersService = async (): Promise<IUser[]> => {
+  const users = await User.find()
+    .select("_id name email avatar")
+    .sort({ name: 1 });
+
+  return users;
+};

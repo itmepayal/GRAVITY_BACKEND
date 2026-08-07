@@ -6,6 +6,7 @@ import logger from "../../config/logger.config";
 import {
   changePasswordService,
   changeProfileService,
+  getAllUsersService,
   getCurrentUserService,
 } from "./user.service";
 import {
@@ -55,6 +56,18 @@ export const changeProfileController = asyncHandler(
       StatusCodes.OK,
       "Profile updated successfully.",
       user,
+    );
+  },
+);
+
+export const getAllUsersController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const users = await getAllUsersService();
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      "Users fetched successfully.",
+      users,
     );
   },
 );
