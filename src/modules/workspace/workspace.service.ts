@@ -94,12 +94,15 @@ export const getWorkspaceByIdService = async (
   const workspace = await Workspace.findById(new Types.ObjectId(workspaceId))
     .populate("owner", "name email avatar")
     .populate("members.user", "name email avatar");
+
   if (!workspace) {
     throw new NotFoundError("Workspace not found.");
   }
+
   const member = workspace.members.find(
     (member) => member.user._id.toString() === userId,
   );
+
   const role = member?.role ?? "member";
   return {
     ...workspace.toObject(),
@@ -274,6 +277,9 @@ export const removeWorkspaceMemberService = async (
     throw new NotFoundError("Workspace not found.");
   }
 
+  console.log("Workspace ID:", workspaceId);
+  console.log("User ID:", userId);
+
   const member = workspace.members.find((m) => m.user.toString() === userId);
 
   if (!member) {
@@ -289,9 +295,16 @@ export const removeWorkspaceMemberService = async (
   );
 
   await workspace.save();
+
   await workspace.populate([
-    { path: "owner", select: "name email avatar" },
-    { path: "members.user", select: "name email avatar" },
+    {
+      path: "owner",
+      select: "name email avatar",
+    },
+    {
+      path: "members.user",
+      select: "name email avatar",
+    },
   ]);
 
   return workspace;
