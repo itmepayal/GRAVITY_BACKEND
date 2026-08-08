@@ -188,7 +188,8 @@ export const createProjectController = asyncHandler(
 export const getWorkspaceProjectsController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { workspaceId } = req.params;
-    const projects = await getWorkspaceProjectsService(workspaceId);
+    const userId = req.user!.id;
+    const projects = await getWorkspaceProjectsService(workspaceId, userId);
     logger.info(
       `Fetched ${projects.length} projects from workspace ${workspaceId}.`,
     );

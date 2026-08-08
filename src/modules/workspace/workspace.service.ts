@@ -68,9 +68,7 @@ export const createWorkspaceService = async (
   return workspace;
 };
 
-export const getUserWorkspacesService = async (
-  userId: string,
-): Promise<IWorkspace[]> => {
+export const getUserWorkspacesService = async (userId: string) => {
   assertValidObjectIds({ userId });
 
   const workspaces = await Workspace.find({
@@ -80,7 +78,20 @@ export const getUserWorkspacesService = async (
     .populate("members.user", "name email avatar")
     .sort({ createdAt: -1 });
 
-  return workspaces;
+  return workspaces.map((workspace) => {
+    const member = workspace.members.find(
+      (member) => member.user._id.toString() === userId,
+    );
+
+    const isOwner = workspace.owner._id.toString() === userId;
+
+    const role = isOwner ? "owner" : (member?.role ?? "member");
+
+    return {
+      ...workspace.toObject(),
+      role,
+    };
+  });
 };
 
 export const getWorkspaceByIdService = async (
@@ -103,7 +114,9 @@ export const getWorkspaceByIdService = async (
     (member) => member.user._id.toString() === userId,
   );
 
-  const role = member?.role ?? "member";
+  const isOwner = workspace.owner._id.toString() === userId;
+  const role = isOwner ? "owner" : (member?.role ?? "member");
+
   return {
     ...workspace.toObject(),
     role,
@@ -396,8 +409,9 @@ export const createProjectService = async (
 
 export const getWorkspaceProjectsService = async (
   workspaceId: string,
-): Promise<IProject[]> => {
-  assertValidObjectIds({ workspaceId });
+  userId: string,
+): Promise<any[]> => {
+  assertValidObjectIds({ workspaceId, userId });
 
   const workspace = await Workspace.findById(workspaceId);
 
@@ -405,10 +419,23 @@ export const getWorkspaceProjectsService = async (
     throw new NotFoundError("Workspace not found.");
   }
 
-  return await Project.find({ workspace: workspaceId })
+  const member = workspace.members.find(
+    (member) => member.user.toString() === userId,
+  );
+
+  const role =
+    member?.role ??
+    (workspace.owner.toString() === userId ? "owner" : "member");
+
+  const projects = await Project.find({ workspace: workspaceId })
     .populate("owner", "name email avatar")
     .populate("workspace", "name color icon")
     .sort({ createdAt: -1 });
+
+  return projects.map((project) => ({
+    ...project.toObject(),
+    role,
+  }));
 };
 
 export const getProjectByIdService = async (
