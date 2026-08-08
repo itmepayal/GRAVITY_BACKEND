@@ -1,30 +1,54 @@
 import { z } from "zod";
 
 export const VALID_PERMISSIONS = [
+  // Workspace
   "workspace:view",
   "workspace:update",
   "workspace:delete",
 
+  // Project
   "project:create",
   "project:view",
   "project:update",
   "project:delete",
 
+  // Members
   "member:add",
   "member:update",
   "member:remove",
 
+  // Boards
   "board:create",
+  "board:view",
   "board:update",
   "board:delete",
 
+  // Sprints
   "sprint:create",
+  "sprint:view",
   "sprint:update",
   "sprint:delete",
 
+  // Tasks
   "task:create",
+  "task:view",
   "task:update",
   "task:delete",
+  "task:archive",
+  "task:assign",
+  "task:manage_comments",
+  "task:watch",
+  "task:attachment",
+  "task:hours",
+
+  // Teams
+  "team:create",
+  "team:view",
+  "team:update",
+  "team:delete",
+  "team:members:add",
+  "team:members:remove",
+  "team:lead:change",
 ] as const;
 
 export const createRoleSchema = z.object({
