@@ -232,11 +232,10 @@ export const createSprintService = async (
     const goalExists = await Goal.findOne({
       _id: new Types.ObjectId(goal),
       workspace: new Types.ObjectId(workspaceId),
-      project: new Types.ObjectId(projectId),
     });
 
     if (!goalExists) {
-      throw new NotFoundError("Goal not found in this project.");
+      throw new NotFoundError("Goal not found in this workspace.");
     }
   }
 
@@ -252,7 +251,7 @@ export const createSprintService = async (
   }
 
   const sprintData: Partial<ISprint> = {
-    name,
+    name: name.trim(),
     workspace: new Types.ObjectId(workspaceId),
     project: new Types.ObjectId(projectId),
     startDate: start,
@@ -269,6 +268,7 @@ export const createSprintService = async (
   }
 
   const sprint = await Sprint.create(sprintData);
+
   return sprint;
 };
 

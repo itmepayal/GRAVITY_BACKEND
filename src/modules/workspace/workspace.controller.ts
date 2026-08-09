@@ -84,8 +84,13 @@ export const getWorkspaceByIdController = asyncHandler(
 export const updateWorkspaceController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { workspaceId } = req.params;
+    const userId = req.user!.id;
     const validatedData = updateWorkspaceSchema.parse(req.body);
-    const workspace = await updateWorkspaceService(workspaceId, validatedData);
+    const workspace = await updateWorkspaceService(
+      workspaceId,
+      userId,
+      validatedData,
+    );
     logger.info(`Workspace ${workspaceId} updated successfully.`);
     AppResponse.success(
       res,
@@ -112,9 +117,11 @@ export const deleteWorkspaceController = asyncHandler(
 export const addWorkspaceMemberController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { workspaceId } = req.params;
+    const currentUserId = req.user!.id;
     const { userId, role } = addWorkspaceMemberSchema.parse(req.body);
     const workspace = await addWorkspaceMemberService(
       workspaceId,
+      currentUserId,
       userId,
       role,
     );
@@ -131,9 +138,11 @@ export const addWorkspaceMemberController = asyncHandler(
 export const updateWorkspaceMemberRoleController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { workspaceId, userId } = req.params;
+    const currentUserId = req.user!.id;
     const { role } = updateWorkspaceMemberRoleSchema.parse(req.body);
     const workspace = await updateWorkspaceMemberRoleService(
       workspaceId,
+      currentUserId,
       userId,
       role,
     );
@@ -152,7 +161,12 @@ export const updateWorkspaceMemberRoleController = asyncHandler(
 export const removeWorkspaceMemberController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { workspaceId, userId } = req.params;
-    const workspace = await removeWorkspaceMemberService(workspaceId, userId);
+    const currentUserId = req.user!.id;
+    const workspace = await removeWorkspaceMemberService(
+      workspaceId,
+      currentUserId,
+      userId,
+    );
     logger.info(`User ${userId} removed from workspace ${workspaceId}.`);
     AppResponse.success(
       res,

@@ -165,10 +165,12 @@ export const updateGoalService = async (
 
 export const deleteGoalService = async (goalId: string): Promise<void> => {
   const goal = await Goal.findById(goalId);
-  if (!goal) throw new NotFoundError("Goal not found.");
-
-  await Sprint.updateMany({ goal: goal._id }, { $unset: { goal: "" } });
-
+  if (!goal) {
+    throw new NotFoundError("Goal not found.");
+  }
+  await Sprint.deleteMany({
+    goal: goal._id,
+  });
   await goal.deleteOne();
 };
 

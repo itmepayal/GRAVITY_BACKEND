@@ -1,5 +1,5 @@
 import mongoose, { Types } from "mongoose";
-import Workspace, { IWorkspace } from "../../models/workspace.model";
+import Workspace from "../../models/workspace.model";
 import {
   BadRequestError,
   ConflictError,
@@ -32,10 +32,48 @@ const assertValidObjectIds = (ids: Record<string, string>): void => {
   }
 };
 
+export const getWorkspaceRoleForUser = (
+  workspace: any,
+  userId: string,
+): "owner" | "admin" | "member" => {
+  if (!workspace) return "member";
+
+  const ownerId = workspace.owner?._id
+    ? workspace.owner._id.toString()
+    : workspace.owner?.toString();
+
+  if (ownerId === userId) {
+    return "owner";
+  }
+
+  const member = workspace.members?.find((m: any) => {
+    if (!m || !m.user) return false;
+    const memberUserId = m.user?._id
+      ? m.user._id.toString()
+      : m.user?.toString();
+    return memberUserId === userId;
+  });
+
+  return member?.role ?? "member";
+};
+
+export const formatWorkspaceResponse = (workspace: any, userId: string) => {
+  const plainObj =
+    typeof workspace.toObject === "function"
+      ? workspace.toObject()
+      : { ...workspace };
+  const role = getWorkspaceRoleForUser(workspace, userId);
+
+  return {
+    ...plainObj,
+    role,
+  };
+};
+
 export const createWorkspaceService = async (
   ownerId: string,
   data: CreateWorkspaceInput,
-): Promise<IWorkspace> => {
+) => {
   assertValidObjectIds({ ownerId });
 
   const trimmedName = data.name.trim();
@@ -65,7 +103,13 @@ export const createWorkspaceService = async (
       },
     ],
   });
-  return workspace;
+
+  await workspace.populate([
+    { path: "owner", select: "name email avatar" },
+    { path: "members.user", select: "name email avatar" },
+  ]);
+
+  return formatWorkspaceResponse(workspace, ownerId);
 };
 
 export const getUserWorkspacesService = async (userId: string) => {
@@ -78,20 +122,9 @@ export const getUserWorkspacesService = async (userId: string) => {
     .populate("members.user", "name email avatar")
     .sort({ createdAt: -1 });
 
-  return workspaces.map((workspace) => {
-    const member = workspace.members.find(
-      (member) => member.user._id.toString() === userId,
-    );
-
-    const isOwner = workspace.owner._id.toString() === userId;
-
-    const role = isOwner ? "owner" : (member?.role ?? "member");
-
-    return {
-      ...workspace.toObject(),
-      role,
-    };
-  });
+  return workspaces.map((workspace) =>
+    formatWorkspaceResponse(workspace, userId),
+  );
 };
 
 export const getWorkspaceByIdService = async (
@@ -110,24 +143,15 @@ export const getWorkspaceByIdService = async (
     throw new NotFoundError("Workspace not found.");
   }
 
-  const member = workspace.members.find(
-    (member) => member.user._id.toString() === userId,
-  );
-
-  const isOwner = workspace.owner._id.toString() === userId;
-  const role = isOwner ? "owner" : (member?.role ?? "member");
-
-  return {
-    ...workspace.toObject(),
-    role,
-  };
+  return formatWorkspaceResponse(workspace, userId);
 };
 
 export const updateWorkspaceService = async (
   workspaceId: string,
+  currentUserId: string,
   data: UpdateWorkspaceInput,
-): Promise<IWorkspace> => {
-  assertValidObjectIds({ workspaceId });
+) => {
+  assertValidObjectIds({ workspaceId, currentUserId });
 
   const workspace = await Workspace.findById(workspaceId);
 
@@ -166,7 +190,7 @@ export const updateWorkspaceService = async (
     { path: "members.user", select: "name email avatar" },
   ]);
 
-  return workspace;
+  return formatWorkspaceResponse(workspace, currentUserId);
 };
 
 export const deleteWorkspaceService = async (
@@ -204,10 +228,11 @@ export const deleteWorkspaceService = async (
 
 export const addWorkspaceMemberService = async (
   workspaceId: string,
+  currentUserId: string,
   userId: string,
   role: "admin" | "member",
-): Promise<IWorkspace> => {
-  assertValidObjectIds({ workspaceId, userId });
+) => {
+  assertValidObjectIds({ workspaceId, currentUserId, userId });
 
   const workspace = await Workspace.findById(workspaceId);
 
@@ -241,15 +266,16 @@ export const addWorkspaceMemberService = async (
     { path: "members.user", select: "name email avatar" },
   ]);
 
-  return workspace;
+  return formatWorkspaceResponse(workspace, currentUserId);
 };
 
 export const updateWorkspaceMemberRoleService = async (
   workspaceId: string,
+  currentUserId: string,
   userId: string,
   role: "admin" | "member",
-): Promise<IWorkspace> => {
-  assertValidObjectIds({ workspaceId, userId });
+) => {
+  assertValidObjectIds({ workspaceId, currentUserId, userId });
 
   const workspace = await Workspace.findById(workspaceId);
 
@@ -275,23 +301,21 @@ export const updateWorkspaceMemberRoleService = async (
     { path: "members.user", select: "name email avatar" },
   ]);
 
-  return workspace;
+  return formatWorkspaceResponse(workspace, currentUserId);
 };
 
 export const removeWorkspaceMemberService = async (
   workspaceId: string,
+  currentUserId: string,
   userId: string,
-): Promise<IWorkspace> => {
-  assertValidObjectIds({ workspaceId, userId });
+) => {
+  assertValidObjectIds({ workspaceId, currentUserId, userId });
 
   const workspace = await Workspace.findById(workspaceId);
 
   if (!workspace) {
     throw new NotFoundError("Workspace not found.");
   }
-
-  console.log("Workspace ID:", workspaceId);
-  console.log("User ID:", userId);
 
   const member = workspace.members.find((m) => m.user.toString() === userId);
 
@@ -320,7 +344,7 @@ export const removeWorkspaceMemberService = async (
     },
   ]);
 
-  return workspace;
+  return formatWorkspaceResponse(workspace, currentUserId);
 };
 
 export const createProjectService = async (
@@ -419,13 +443,7 @@ export const getWorkspaceProjectsService = async (
     throw new NotFoundError("Workspace not found.");
   }
 
-  const member = workspace.members.find(
-    (member) => member.user.toString() === userId,
-  );
-
-  const role =
-    member?.role ??
-    (workspace.owner.toString() === userId ? "owner" : "member");
+  const role = getWorkspaceRoleForUser(workspace, userId);
 
   const projects = await Project.find({ workspace: workspaceId })
     .populate("owner", "name email avatar")
