@@ -7,8 +7,23 @@ import {
   getBoardWithTasksService,
   updateBoardService,
   deleteBoardService,
+  getAllUserBoardsService
 } from "./board.service";
 import { updateBoardSchema } from "../../validators/board.validator";
+
+export const getAllUserBoardsController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user!.id;
+    const boards = await getAllUserBoardsService(userId);
+    logger.info(`All boards fetched successfully for user ${userId}.`);
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      "Boards fetched successfully.",
+      boards,
+    );
+  },
+);
 
 export const getBoardByIdController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {

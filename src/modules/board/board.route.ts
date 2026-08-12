@@ -10,10 +10,16 @@ import {
   getBoardByIdController,
   updateBoardController,
   deleteBoardController,
+  getAllUserBoardsController
 } from "./board.controller";
 
 const boardRouter = express.Router();
 
+boardRouter.get(
+  "/",
+  authenticate,
+  getAllUserBoardsController,
+);
 boardRouter.get(
   "/:boardId",
   authenticate,

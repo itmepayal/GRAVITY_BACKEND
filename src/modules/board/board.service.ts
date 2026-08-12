@@ -1,7 +1,31 @@
 import Board, { IBoard } from "../../models/board.model";
 import Task from "../../models/task.model";
+import Project from "../../models/project.model";
 import { BadRequestError, NotFoundError } from "../../utils/errors/app.error";
 import { UpdateBoardSchemaType } from "../../validators/board.validator";
+
+export const getAllUserBoardsService = async (userId: string) => {
+  const accessibleProjects = await Project.find({
+    $or: [
+      { owner: userId },
+      { "members.user": userId },
+    ],
+    isArchived: { $ne: true },
+  }).select("_id");
+
+  const projectIds = accessibleProjects.map(
+    (project) => project._id,
+  );
+
+  const boards = await Board.find({
+    project: { $in: projectIds },
+  })
+    .populate("project", "name")
+    .sort({ updatedAt: -1 });
+
+  return boards;
+};
+
 
 export const getBoardWithTasksService = async (board: IBoard) => {
   const tasks = await Task.find({ board: board._id })
