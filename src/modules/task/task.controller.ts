@@ -45,6 +45,7 @@ import {
   addAttachmentService,
   removeAttachmentService,
   updateActualHoursService,
+  getMyTasksService,
 } from "./task.service";
 import { uploadToCloudinary } from "../../config/cloudinary.config";
 import { IAttachment } from "../../models/task.model";
@@ -501,6 +502,27 @@ export const updateActualHoursController = asyncHandler(
       StatusCodes.OK,
       "Actual hours updated successfully.",
       task,
+    );
+  },
+);
+
+export const getMyTasksController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user!.id;
+    const { status, priority, isArchived } = taskListQuerySchema.parse({
+      query: req.query,
+    }).query;
+    const tasks = await getMyTasksService(userId, {
+      status,
+      priority,
+      isArchived,
+    });
+    logger.info(`Tasks assigned to user ${userId} fetched successfully.`);
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      "My tasks fetched successfully.",
+      tasks,
     );
   },
 );

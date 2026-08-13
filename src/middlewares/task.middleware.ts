@@ -32,7 +32,6 @@ export const checkTaskCreateAccess = async (
   next: NextFunction,
 ) => {
   try {
-    console.log(req.body.data);
     const data = JSON.parse(req.body.data);
 
     const { board } = data;

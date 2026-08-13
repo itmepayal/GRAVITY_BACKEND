@@ -4,10 +4,13 @@ export const UPDATABLE_TASK_FIELDS = [
   "column",
   "sprint",
   "assignee",
+  "watchers",
   "status",
   "priority",
   "tags",
   "dueDate",
   "estimatedHours",
   "actualHours",
+  "subtasks",
+  "isArchived",
 ] as const;

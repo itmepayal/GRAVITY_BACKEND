@@ -176,7 +176,8 @@ export const getTasksBySprintService = async (sprintId: string) => {
     isArchived: false,
   })
     .populate("assignee", "name email avatar")
-    .populate("createdBy", "name email")
+    .populate("watchers", "name email avatar")
+    .populate("createdBy", "name email avatar")
     .sort({ createdAt: -1 });
 
   return {

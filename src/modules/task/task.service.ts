@@ -77,8 +77,9 @@ export const getAllTasksOfBoardService = async (
   filter.isArchived = filters.isArchived ?? false;
 
   const tasks = await Task.find(filter)
-    .populate("assignee", "name email")
-    .populate("createdBy", "name email")
+    .populate("assignee", "name email avatar")
+    .populate("watchers", "name email avatar")
+    .populate("createdBy", "name email avatar")
     .sort({ createdAt: -1 });
 
   return tasks;
@@ -86,9 +87,9 @@ export const getAllTasksOfBoardService = async (
 
 export const getTaskByIdService = async (taskId: string) => {
   const task = await Task.findById(taskId)
-    .populate("createdBy", "name email")
-    .populate("assignee", "name email")
-    .populate("watchers", "name email")
+    .populate("createdBy", "name email avatar")
+    .populate("assignee", "name email avatar")
+    .populate("watchers", "name email avatar")
     .populate("board", "name")
     .populate("project", "name")
     .populate("workspace", "name")
@@ -141,6 +142,16 @@ export const updateTaskService = async (
   }
 
   await task.save();
+
+  await task.populate([
+    { path: "assignee", select: "name email avatar" },
+    { path: "watchers", select: "name email avatar" },
+    { path: "createdBy", select: "name email avatar" },
+    { path: "board", select: "name" },
+    { path: "project", select: "name" },
+    { path: "workspace", select: "name" },
+    { path: "sprint", select: "name" },
+  ]);
 
   return task;
 };
@@ -530,4 +541,39 @@ export const updateActualHoursService = async (
   task.actualHours = actualHours;
   await task.save();
   return task;
+};
+
+export const getMyTasksService = async (
+  userId: string,
+  filters: TaskListFilters,
+) => {
+  const accessibleProjects = await Project.find({
+    $or: [{ owner: userId }, { "members.user": userId }],
+  }).select("_id");
+
+  const projectIds = accessibleProjects.map((p) => p._id);
+
+  const filter: Record<string, any> = {
+    $or: [
+      { assignee: userId },
+      { createdBy: userId },
+      { watchers: userId },
+      { project: { $in: projectIds } },
+    ],
+  };
+
+  if (filters.status) filter.status = filters.status;
+  if (filters.priority) filter.priority = filters.priority;
+  filter.isArchived = filters.isArchived ?? false;
+
+  const tasks = await Task.find(filter)
+    .populate("assignee", "name email avatar")
+    .populate("watchers", "name email avatar")
+    .populate("createdBy", "name email avatar")
+    .populate("workspace", "name")
+    .populate("project", "name")
+    .populate("board", "name")
+    .sort({ createdAt: -1 });
+
+  return tasks;
 };

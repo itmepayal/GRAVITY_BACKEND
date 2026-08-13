@@ -30,6 +30,8 @@ export const getAllUserBoardsService = async (userId: string) => {
 export const getBoardWithTasksService = async (board: IBoard) => {
   const tasks = await Task.find({ board: board._id })
     .populate("assignee", "name email avatar")
+    .populate("watchers", "name email avatar")
+    .populate("createdBy", "name email avatar")
     .sort({ createdAt: 1 });
 
   const tasksByColumn: Record<string, typeof tasks> = {};

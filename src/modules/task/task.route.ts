@@ -26,12 +26,14 @@ import {
   updateCommentController,
   addWatcherController,
   removeWatcherController,
+  getMyTasksController,
   updateActualHoursController,
 } from "./task.controller";
 import { upload } from "../../middlewares/multer.middleware";
 
 const taskRouter = express.Router();
 
+taskRouter.get("/", authenticate, getMyTasksController);
 taskRouter.post(
   "/",
   authenticate,
