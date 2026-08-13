@@ -53,7 +53,14 @@ import { BadRequestError } from "../../utils/errors/app.error";
 export const createTaskController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const userId = req.user!.id;
-    const body = createTaskSchema.parse(req.body);
+
+    console.log("Welcome DODO");
+    console.log(req.body);
+
+    const parsedData = JSON.parse(req.body.data);
+
+    const body = createTaskSchema.parse(parsedData);
+
     const files = req.files as Express.Multer.File[];
 
     const attachments = [];
@@ -79,11 +86,14 @@ export const createTaskController = asyncHandler(
         });
       }
     }
+
     const task = await createTaskService(userId, {
       ...body,
       attachments,
     });
+
     logger.info(`Task ${task.id} created successfully.`);
+
     AppResponse.success(
       res,
       StatusCodes.CREATED,

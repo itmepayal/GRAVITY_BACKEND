@@ -32,12 +32,17 @@ export const checkTaskCreateAccess = async (
   next: NextFunction,
 ) => {
   try {
-    const { board } = req.body;
+    console.log(req.body.data);
+    const data = JSON.parse(req.body.data);
+
+    const { board } = data;
+
     if (!board) {
       throw new NotFoundError("Board is required to create a task.");
     }
 
     req.params.boardId = board;
+
     return checkBoardAccess(req, res, next);
   } catch (error) {
     next(error);
