@@ -24,6 +24,10 @@ const options: swaggerJsdoc.Options = {
 
     tags: [
       {
+        name: "Health",
+        description: "API health and server status endpoints",
+      },
+      {
         name: "Authentication",
         description: "Authentication and account management APIs",
       },
@@ -481,7 +485,7 @@ const options: swaggerJsdoc.Options = {
     },
   },
 
-  apis: ["./src/modules/**/*.ts"],
+  apis: ["./src/modules/**/*.ts", "./src/server.ts"],
 };
 
 export const swaggerSpec = swaggerJsdoc(options);
