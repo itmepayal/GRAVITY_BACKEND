@@ -18,7 +18,7 @@ type ServerConfig = {
   CLOUDINARY_CLOUD_NAME: string;
   BREVO_API_KEY: string;
   BREVO_SENDER_EMAIL: string;
-  CLIENT_URL: string;
+  CLIENT_URL: string[];
   API_URL: string;
   JWT_ACCESS_SECRET: string;
   JWT_REFRESH_SECRET: string;
@@ -40,7 +40,11 @@ export const serverConfig: ServerConfig = {
 
   BREVO_API_KEY: process.env.BREVO_API_KEY || "",
   BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL || "",
-  CLIENT_URL: process.env.CLIENT_URL || "",
+
+  CLIENT_URL: (process.env.CLIENT_URL || "")
+    .split(",")
+    .map((url) => url.trim())
+    .filter(Boolean),
   API_URL: process.env.API_URL || "",
 
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET!,

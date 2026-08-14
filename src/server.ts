@@ -13,7 +13,14 @@ import { connectDB } from "./config/db.config";
 
 const app = express();
 
-const allowedOrigins = serverConfig.CLIENT_URL;
+// =========================
+// CORS
+// =========================
+
+const allowedOrigins = [
+  ...serverConfig.CLIENT_URL,
+  ...(serverConfig.API_URL ? [serverConfig.API_URL] : []),
+];
 
 app.use(
   cors({
@@ -36,6 +43,18 @@ app.use(
 );
 
 app.use(express.json());
+
+// =========================
+// Root
+// =========================
+
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Gravity API is running",
+    docs: "/api-docs",
+  });
+});
 
 // =========================
 // Health Check
