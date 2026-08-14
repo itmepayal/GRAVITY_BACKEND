@@ -1,4 +1,11 @@
 import dotenv from "dotenv";
+import path from "path";
+
+const envFile = process.env.NODE_ENV === "production" ? ".env" : ".env.local";
+
+dotenv.config({
+  path: path.resolve(process.cwd(), envFile),
+});
 
 dotenv.config();
 
@@ -12,6 +19,7 @@ type ServerConfig = {
   BREVO_API_KEY: string;
   BREVO_SENDER_EMAIL: string;
   CLIENT_URL: string;
+  API_URL: string;
   JWT_ACCESS_SECRET: string;
   JWT_REFRESH_SECRET: string;
   JWT_ACCESS_EXPIRE: string;
@@ -33,6 +41,7 @@ export const serverConfig: ServerConfig = {
   BREVO_API_KEY: process.env.BREVO_API_KEY || "",
   BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL || "",
   CLIENT_URL: process.env.CLIENT_URL || "",
+  API_URL: process.env.API_URL || "",
 
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET!,
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET!,

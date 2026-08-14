@@ -1,4 +1,5 @@
 import swaggerJsdoc from "swagger-jsdoc";
+import { serverConfig } from "./index";
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -8,13 +9,16 @@ const options: swaggerJsdoc.Options = {
       title: "Gravity Task Management System API",
       version: "1.0.0",
       description:
-        "REST API documentation for the Gravity Task Management System.",
+        "REST API documentation for the Gravity Task Management System. Provides authentication, workspace, project, board, sprint, task, team, role, goal, and user management APIs.",
     },
 
     servers: [
       {
-        url: "http://localhost:5000/api/v1",
-        description: "Local development server",
+        url: `${serverConfig.API_URL}/api/v1`,
+        description:
+          serverConfig.NODE_ENV === "production"
+            ? "Production server"
+            : "Local development server",
       },
     ],
 
@@ -24,38 +28,43 @@ const options: swaggerJsdoc.Options = {
         description: "Authentication and account management APIs",
       },
       {
-        name: "Goals",
-        description:
-          "Workspace goal management APIs (create, track, and link goals to tasks)",
-      },
-      {
-        name: "Boards",
-        description:
-          "Board management APIs (view, update, delete boards within a project)",
-      },
-      {
-        name: "Projects",
-        description:
-          "Project management APIs (members, boards, sprints, and tasks within a project)",
-      },
-      {
-        name: "Roles",
-        description:
-          "Workspace role management APIs (list, update, and delete custom roles)",
-      },
-      {
-        name: "Teams",
-        description:
-          "Team management APIs (create, update, delete teams and manage membership within a workspace)",
-      },
-      {
         name: "Users",
         description: "User profile and account management APIs",
       },
       {
         name: "Workspaces",
         description:
-          "Workspace management APIs (create, update, delete workspaces and manage member roles)",
+          "Workspace management APIs including members, projects, and roles",
+      },
+      {
+        name: "Projects",
+        description:
+          "Project management APIs including members, boards, sprints, and tasks",
+      },
+      {
+        name: "Boards",
+        description: "Board management APIs",
+      },
+      {
+        name: "Sprints",
+        description: "Sprint management APIs",
+      },
+      {
+        name: "Tasks",
+        description:
+          "Task management APIs including subtasks, comments, watchers, and assignees",
+      },
+      {
+        name: "Teams",
+        description: "Team management APIs including members and team leads",
+      },
+      {
+        name: "Roles",
+        description: "Workspace role management APIs",
+      },
+      {
+        name: "Goals",
+        description: "Workspace goal management APIs including task linking",
       },
     ],
 
@@ -65,7 +74,8 @@ const options: swaggerJsdoc.Options = {
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
-          description: "Enter your JWT access token",
+          description:
+            "Enter your JWT access token. Example: eyJhbGciOiJIUzI1NiIs...",
         },
       },
 
@@ -73,12 +83,20 @@ const options: swaggerJsdoc.Options = {
         ApiErrorResponse: {
           type: "object",
           properties: {
-            success: { type: "boolean", example: false },
-            message: { type: "string", example: "Invalid email or password." },
+            success: {
+              type: "boolean",
+              example: false,
+            },
+            message: {
+              type: "string",
+              example: "Invalid email or password.",
+            },
             errors: {
               type: "array",
-              items: { type: "string" },
               nullable: true,
+              items: {
+                type: "string",
+              },
               example: null,
             },
           },
@@ -87,30 +105,55 @@ const options: swaggerJsdoc.Options = {
         ApiSuccessEnvelope: {
           type: "object",
           properties: {
-            success: { type: "boolean", example: true },
-            message: { type: "string", example: "Request successful." },
-            data: { type: "object", nullable: true },
+            success: {
+              type: "boolean",
+              example: true,
+            },
+            message: {
+              type: "string",
+              example: "Request successful.",
+            },
+            data: {
+              nullable: true,
+              type: "object",
+            },
           },
         },
 
         MessageOnlyResponse: {
           allOf: [
-            { $ref: "#/components/schemas/ApiSuccessEnvelope" },
+            {
+              $ref: "#/components/schemas/ApiSuccessEnvelope",
+            },
             {
               type: "object",
               properties: {
-                data: { type: "object", nullable: true, example: null },
+                data: {
+                  nullable: true,
+                  type: "object",
+                  example: null,
+                },
               },
             },
           ],
         },
 
+        // --------------------------------
+        // USER
+        // --------------------------------
+
         BoardRefUser: {
           type: "object",
           description: "Minimal populated user reference.",
           properties: {
-            id: { type: "string", example: "665f1c2e8b3f4a0012a3c9d1" },
-            name: { type: "string", example: "John Doe" },
+            id: {
+              type: "string",
+              example: "665f1c2e8b3f4a0012a3c9d1",
+            },
+            name: {
+              type: "string",
+              example: "John Doe",
+            },
             email: {
               type: "string",
               format: "email",
@@ -118,10 +161,15 @@ const options: swaggerJsdoc.Options = {
             },
             avatar: {
               type: "string",
-              example: "https://lh3.googleusercontent.com/a/abc123",
+              nullable: true,
+              example: "https://example.com/avatar.jpg",
             },
           },
         },
+
+        // --------------------------------
+        // AUTH
+        // --------------------------------
 
         RegisterRequest: {
           type: "object",
@@ -263,33 +311,66 @@ const options: swaggerJsdoc.Options = {
           },
         },
 
+        // --------------------------------
+        // TEAMS
+        // --------------------------------
+
         TeamMember: {
           type: "object",
           properties: {
-            user: { $ref: "#/components/schemas/BoardRefUser" },
-            joinedAt: { type: "string", format: "date-time" },
+            user: {
+              $ref: "#/components/schemas/BoardRefUser",
+            },
+            joinedAt: {
+              type: "string",
+              format: "date-time",
+            },
           },
         },
 
         Team: {
           type: "object",
           properties: {
-            id: { type: "string", example: "665f7a1e8b3f4a0012a3ce60" },
-            name: { type: "string", example: "Platform Engineering" },
+            id: {
+              type: "string",
+              example: "665f7a1e8b3f4a0012a3ce60",
+            },
+            name: {
+              type: "string",
+              example: "Platform Engineering",
+            },
             description: {
               type: "string",
-              example: "Owns core infra and internal tooling.",
+              example: "Owns core infrastructure and internal tooling.",
             },
-            color: { type: "string", example: "#22C55E" },
-            workspace: { type: "string", example: "665f0a1e8b3f4a0012a3c9c1" },
-            lead: { $ref: "#/components/schemas/BoardRefUser" },
+            color: {
+              type: "string",
+              example: "#22C55E",
+            },
+            workspace: {
+              type: "string",
+              example: "665f0a1e8b3f4a0012a3c9c1",
+            },
+            lead: {
+              $ref: "#/components/schemas/BoardRefUser",
+            },
             members: {
               type: "array",
-              items: { $ref: "#/components/schemas/TeamMember" },
+              items: {
+                $ref: "#/components/schemas/TeamMember",
+              },
             },
-            createdBy: { $ref: "#/components/schemas/BoardRefUser" },
-            createdAt: { type: "string", format: "date-time" },
-            updatedAt: { type: "string", format: "date-time" },
+            createdBy: {
+              $ref: "#/components/schemas/BoardRefUser",
+            },
+            createdAt: {
+              type: "string",
+              format: "date-time",
+            },
+            updatedAt: {
+              type: "string",
+              format: "date-time",
+            },
           },
         },
 
@@ -297,12 +378,18 @@ const options: swaggerJsdoc.Options = {
           type: "object",
           required: ["name", "lead"],
           properties: {
-            name: { type: "string", example: "Platform Engineering" },
+            name: {
+              type: "string",
+              example: "Platform Engineering",
+            },
             description: {
               type: "string",
-              example: "Owns core infra and internal tooling.",
+              example: "Owns core infrastructure and internal tooling.",
             },
-            color: { type: "string", example: "#22C55E" },
+            color: {
+              type: "string",
+              example: "#22C55E",
+            },
             lead: {
               type: "string",
               description: "Must already be a member of the workspace.",
@@ -313,14 +400,21 @@ const options: swaggerJsdoc.Options = {
 
         UpdateTeamRequest: {
           type: "object",
-          description: "All fields optional; only provided fields are updated.",
+          description:
+            "All fields are optional. Only provided fields are updated.",
           properties: {
-            name: { type: "string", example: "Platform & Infra" },
+            name: {
+              type: "string",
+              example: "Platform & Infrastructure",
+            },
             description: {
               type: "string",
               example: "Updated team description.",
             },
-            color: { type: "string", example: "#3B82F6" },
+            color: {
+              type: "string",
+              example: "#3B82F6",
+            },
           },
         },
 
@@ -351,15 +445,15 @@ const options: swaggerJsdoc.Options = {
 
         TeamResponse: {
           allOf: [
-            { $ref: "#/components/schemas/ApiSuccessEnvelope" },
+            {
+              $ref: "#/components/schemas/ApiSuccessEnvelope",
+            },
             {
               type: "object",
               properties: {
-                message: {
-                  type: "string",
-                  example: "Team updated successfully.",
+                data: {
+                  $ref: "#/components/schemas/Team",
                 },
-                data: { $ref: "#/components/schemas/Team" },
               },
             },
           ],
@@ -367,17 +461,17 @@ const options: swaggerJsdoc.Options = {
 
         TeamsListResponse: {
           allOf: [
-            { $ref: "#/components/schemas/ApiSuccessEnvelope" },
+            {
+              $ref: "#/components/schemas/ApiSuccessEnvelope",
+            },
             {
               type: "object",
               properties: {
-                message: {
-                  type: "string",
-                  example: "Teams fetched successfully.",
-                },
                 data: {
                   type: "array",
-                  items: { $ref: "#/components/schemas/Team" },
+                  items: {
+                    $ref: "#/components/schemas/Team",
+                  },
                 },
               },
             },

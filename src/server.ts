@@ -13,33 +13,74 @@ import { connectDB } from "./config/db.config";
 
 const app = express();
 
+const allowedOrigins = serverConfig.CLIENT_URL;
+
 app.use(
   cors({
-    origin: serverConfig.CLIENT_URL,
+    origin: (origin, callback) => {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      logger.warn(`Blocked by CORS: ${origin}`);
+
+      return callback(new Error("Not allowed by CORS"));
+    },
+
     credentials: true,
   }),
 );
 
 app.use(express.json());
 
+// =========================
+// Health Check
+// =========================
+
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Gravity API is healthy",
+    status: "OK",
+    environment: serverConfig.NODE_ENV,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// =========================
+// API Routes
+// =========================
+
 app.use("/api/v1", v1Router);
+
+// =========================
+// Swagger Documentation
+// =========================
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+// =========================
+// Error Handling
+// =========================
+
 app.use(notFoundHandler);
 app.use(errorHandler);
+
+// =========================
+// Start Server
+// =========================
 
 const startServer = async () => {
   try {
     await connectDB();
 
     app.listen(serverConfig.PORT, () => {
-      logger.info(`Server is running on http://localhost:${serverConfig.PORT}`);
-
-      logger.info(
-        `Swagger docs: http://localhost:${serverConfig.PORT}/api-docs`,
-      );
-
+      logger.info(`Server is running on port ${serverConfig.PORT}`);
+      logger.info(`Swagger docs: ${serverConfig.API_URL}/api-docs`);
       logger.info("Press Ctrl+C to stop the server.");
     });
   } catch (error) {
