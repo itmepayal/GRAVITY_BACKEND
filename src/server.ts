@@ -59,7 +59,17 @@ app.get("/", (req, res) => {
 // =========================
 // Health Check
 // =========================
-
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Check API health
+ *     tags:
+ *       - Health
+ *     responses:
+ *       200:
+ *         description: API is healthy
+ */
 app.get("/health", (req, res) => {
   res.status(200).json({
     success: true,
