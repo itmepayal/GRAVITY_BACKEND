@@ -70,7 +70,7 @@ app.get("/", (req, res) => {
  *       200:
  *         description: API is healthy
  */
-app.get("/health", (req, res) => {
+app.get("/api/v1/health", (req, res) => {
   res.status(200).json({
     success: true,
     message: "Gravity API is healthy",
