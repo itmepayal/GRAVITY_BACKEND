@@ -6,6 +6,11 @@ const objectIdSchema = z
   .string()
   .regex(/^[0-9a-fA-F]{24}$/, "Invalid ObjectId.");
 
+const flexibleDateSchema = (fieldLabel: string) =>
+  z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: `${fieldLabel} must be a valid date.`,
+  });
+
 export const PROJECT_STATUSES = [
   "planning",
   "active",
@@ -48,20 +53,11 @@ export const createProjectSchema = z
 
     isArchived: z.boolean().optional().default(false),
 
-    archivedAt: z
-      .string()
-      .datetime("Archived date must be a valid ISO date.")
-      .optional(),
+    archivedAt: flexibleDateSchema("Archived date").optional(),
 
-    startDate: z
-      .string()
-      .datetime("Start date must be a valid ISO date.")
-      .optional(),
+    startDate: flexibleDateSchema("Start date").optional(),
 
-    dueDate: z
-      .string()
-      .datetime("Due date must be a valid ISO date.")
-      .optional(),
+    dueDate: flexibleDateSchema("Due date").optional(),
   })
   .refine(
     (data) => {
@@ -105,20 +101,11 @@ export const updateProjectSchema = z
 
     isArchived: z.boolean().optional(),
 
-    archivedAt: z
-      .string()
-      .datetime("Archived date must be a valid ISO date.")
-      .optional(),
+    archivedAt: flexibleDateSchema("Archived date").optional(),
 
-    startDate: z
-      .string()
-      .datetime("Start date must be a valid ISO date.")
-      .optional(),
+    startDate: flexibleDateSchema("Start date").optional(),
 
-    dueDate: z
-      .string()
-      .datetime("Due date must be a valid ISO date.")
-      .optional(),
+    dueDate: flexibleDateSchema("Due date").optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required to update.",
