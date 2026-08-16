@@ -37,13 +37,13 @@ export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema>;
 
 export const addWorkspaceMemberSchema = z.object({
   userId: z.string().trim().min(1, "User ID is required."),
-  role: z.enum(["admin", "member"]),
+  role: z.enum(["admin", "member", "viewer"]),
 });
 
 export type AddWorkspaceMemberInput = z.infer<typeof addWorkspaceMemberSchema>;
 
 export const updateWorkspaceMemberRoleSchema = z.object({
-  role: z.enum(["admin", "member"]),
+  role: z.enum(["admin", "member", "viewer"]),
 });
 
 export type UpdateWorkspaceMemberRoleInput = z.infer<

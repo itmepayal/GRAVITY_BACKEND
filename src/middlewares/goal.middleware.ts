@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import Goal from "../models/goal.model";
 import Workspace from "../models/workspace.model";
+import type { IRole } from "../models/role.model";
 import { ForbiddenError, NotFoundError } from "../utils/errors/app.error";
 
 export const checkGoalAccess = async (
@@ -17,7 +18,9 @@ export const checkGoalAccess = async (
 
     req.goal = goal;
 
-    const workspace = await Workspace.findById(goal.workspace);
+    const workspace = await Workspace.findById(goal.workspace).populate(
+      "members.role",
+    );
     if (!workspace) throw new NotFoundError("Workspace not found.");
 
     if (workspace.owner.toString() === userId) {
@@ -33,7 +36,14 @@ export const checkGoalAccess = async (
       throw new ForbiddenError("No access to this goal.");
     }
 
-    if (wsMembership.role === "admin") {
+    const workspaceRole = wsMembership.role as unknown as IRole;
+
+    const isWorkspaceAdminOrOwner =
+      workspaceRole?.name === "Owner" ||
+      workspaceRole?.name === "Admin" ||
+      workspaceRole?.permissions?.includes("*");
+
+    if (isWorkspaceAdminOrOwner) {
       req.goalPermissions = ["*"];
       return next();
     }

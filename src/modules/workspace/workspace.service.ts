@@ -3,6 +3,7 @@ import Workspace from "../../models/workspace.model";
 import {
   BadRequestError,
   ConflictError,
+  ForbiddenError,
   NotFoundError,
 } from "../../utils/errors/app.error";
 import {
@@ -32,18 +33,42 @@ const assertValidObjectIds = (ids: Record<string, string>): void => {
   }
 };
 
+const populateWorkspace = (workspace: any) =>
+  workspace.populate([
+    { path: "owner", select: "name email avatar" },
+    { path: "members.user", select: "name email avatar" },
+    { path: "members.role" },
+  ]);
+
+const getSystemRoleByName = async (name: string): Promise<IRole> => {
+  const normalizedName =
+    name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+
+  const role = await Role.findOne({
+    name: normalizedName,
+    isSystem: true,
+    workspace: null,
+  });
+
+  if (!role) {
+    throw new NotFoundError(`Role "${normalizedName}" not found.`);
+  }
+
+  return role;
+};
+
 export const getWorkspaceRoleForUser = (
   workspace: any,
   userId: string,
-): "owner" | "admin" | "member" => {
-  if (!workspace) return "member";
+): string => {
+  if (!workspace) return "Member";
 
   const ownerId = workspace.owner?._id
     ? workspace.owner._id.toString()
     : workspace.owner?.toString();
 
   if (ownerId === userId) {
-    return "owner";
+    return "Owner";
   }
 
   const member = workspace.members?.find((m: any) => {
@@ -54,7 +79,13 @@ export const getWorkspaceRoleForUser = (
     return memberUserId === userId;
   });
 
-  return member?.role ?? "member";
+  if (!member) return "Member";
+
+  if (member.role && typeof member.role === "object" && "name" in member.role) {
+    return member.role.name;
+  }
+
+  return "Member";
 };
 
 export const formatWorkspaceResponse = (workspace: any, userId: string) => {
@@ -89,6 +120,8 @@ export const createWorkspaceService = async (
     throw new BadRequestError("Workspace with this name already exists.");
   }
 
+  const ownerRole = await getSystemRoleByName("Owner");
+
   const workspace = await Workspace.create({
     name: trimmedName,
     description: data.description,
@@ -99,15 +132,12 @@ export const createWorkspaceService = async (
     members: [
       {
         user: new Types.ObjectId(ownerId),
-        role: "owner",
+        role: ownerRole._id,
       },
     ],
   });
 
-  await workspace.populate([
-    { path: "owner", select: "name email avatar" },
-    { path: "members.user", select: "name email avatar" },
-  ]);
+  await populateWorkspace(workspace);
 
   return formatWorkspaceResponse(workspace, ownerId);
 };
@@ -120,6 +150,7 @@ export const getUserWorkspacesService = async (userId: string) => {
   })
     .populate("owner", "name email avatar")
     .populate("members.user", "name email avatar")
+    .populate("members.role")
     .sort({ createdAt: -1 });
 
   return workspaces.map((workspace) =>
@@ -137,7 +168,8 @@ export const getWorkspaceByIdService = async (
   });
   const workspace = await Workspace.findById(new Types.ObjectId(workspaceId))
     .populate("owner", "name email avatar")
-    .populate("members.user", "name email avatar");
+    .populate("members.user", "name email avatar")
+    .populate("members.role");
 
   if (!workspace) {
     throw new NotFoundError("Workspace not found.");
@@ -185,10 +217,7 @@ export const updateWorkspaceService = async (
   if (data.isPrivate !== undefined) workspace.isPrivate = data.isPrivate;
 
   await workspace.save();
-  await workspace.populate([
-    { path: "owner", select: "name email avatar" },
-    { path: "members.user", select: "name email avatar" },
-  ]);
+  await populateWorkspace(workspace);
 
   return formatWorkspaceResponse(workspace, currentUserId);
 };
@@ -230,7 +259,7 @@ export const addWorkspaceMemberService = async (
   workspaceId: string,
   currentUserId: string,
   userId: string,
-  role: "admin" | "member",
+  roleName: "admin" | "member" | "viewer",
 ) => {
   assertValidObjectIds({ workspaceId, currentUserId, userId });
 
@@ -254,17 +283,16 @@ export const addWorkspaceMemberService = async (
     throw new BadRequestError("User is already a member.");
   }
 
+  const role = await getSystemRoleByName(roleName);
+
   workspace.members.push({
     user: new Types.ObjectId(userId),
-    role,
+    role: role._id as unknown as Types.ObjectId,
     joinedAt: new Date(),
   });
 
   await workspace.save();
-  await workspace.populate([
-    { path: "owner", select: "name email avatar" },
-    { path: "members.user", select: "name email avatar" },
-  ]);
+  await populateWorkspace(workspace);
 
   return formatWorkspaceResponse(workspace, currentUserId);
 };
@@ -273,11 +301,12 @@ export const updateWorkspaceMemberRoleService = async (
   workspaceId: string,
   currentUserId: string,
   userId: string,
-  role: "admin" | "member",
+  roleName: "admin" | "member" | "viewer",
 ) => {
   assertValidObjectIds({ workspaceId, currentUserId, userId });
 
-  const workspace = await Workspace.findById(workspaceId);
+  const workspace =
+    await Workspace.findById(workspaceId).populate("members.role");
 
   if (!workspace) {
     throw new NotFoundError("Workspace not found.");
@@ -289,17 +318,18 @@ export const updateWorkspaceMemberRoleService = async (
     throw new NotFoundError("Member not found.");
   }
 
-  if (member.role === "owner") {
+  const currentRoleName = (member.role as any)?.name;
+
+  if (currentRoleName === "Owner") {
     throw new BadRequestError("Owner role cannot be changed.");
   }
 
-  member.role = role;
+  const newRole = await getSystemRoleByName(roleName);
+
+  member.role = newRole._id as unknown as Types.ObjectId;
 
   await workspace.save();
-  await workspace.populate([
-    { path: "owner", select: "name email avatar" },
-    { path: "members.user", select: "name email avatar" },
-  ]);
+  await populateWorkspace(workspace);
 
   return formatWorkspaceResponse(workspace, currentUserId);
 };
@@ -309,40 +339,68 @@ export const removeWorkspaceMemberService = async (
   currentUserId: string,
   userId: string,
 ) => {
-  assertValidObjectIds({ workspaceId, currentUserId, userId });
+  assertValidObjectIds({
+    workspaceId,
+    currentUserId,
+    userId,
+  });
 
-  const workspace = await Workspace.findById(workspaceId);
+  if (currentUserId === userId) {
+    throw new BadRequestError("You cannot remove yourself from the workspace.");
+  }
+
+  const workspace =
+    await Workspace.findById(workspaceId).populate("members.role");
 
   if (!workspace) {
     throw new NotFoundError("Workspace not found.");
   }
 
-  const member = workspace.members.find((m) => m.user.toString() === userId);
+  const isOwner = workspace.owner.toString() === currentUserId;
 
-  if (!member) {
+  const currentMember = workspace.members.find(
+    (member) => member.user.toString() === currentUserId,
+  );
+
+  if (!isOwner && !currentMember) {
+    throw new ForbiddenError("You are not a member of this workspace.");
+  }
+
+  const currentRoleName = isOwner
+    ? "owner"
+    : (currentMember?.role as any)?.name?.toLowerCase();
+
+  if (currentRoleName !== "owner" && currentRoleName !== "admin") {
+    throw new ForbiddenError(
+      "You do not have permission to remove workspace members.",
+    );
+  }
+
+  const targetMember = workspace.members.find(
+    (member) => member.user.toString() === userId,
+  );
+
+  if (!targetMember) {
     throw new NotFoundError("Member not found.");
   }
 
-  if (member.role === "owner") {
-    throw new BadRequestError("Owner cannot be removed.");
+  const targetRoleName = (targetMember.role as any)?.name?.toLowerCase();
+
+  if (targetRoleName === "owner") {
+    throw new BadRequestError("Workspace owner cannot be removed.");
+  }
+
+  if (currentRoleName === "admin" && targetRoleName === "admin") {
+    throw new ForbiddenError("Admin cannot remove another admin.");
   }
 
   workspace.members = workspace.members.filter(
-    (m) => m.user.toString() !== userId,
+    (member) => member.user.toString() !== userId,
   );
 
   await workspace.save();
 
-  await workspace.populate([
-    {
-      path: "owner",
-      select: "name email avatar",
-    },
-    {
-      path: "members.user",
-      select: "name email avatar",
-    },
-  ]);
+  await populateWorkspace(workspace);
 
   return formatWorkspaceResponse(workspace, currentUserId);
 };
@@ -375,15 +433,7 @@ export const createProjectService = async (
     );
   }
 
-  const ownerRole = await Role.findOne({
-    name: "Owner",
-    isSystem: true,
-    workspace: null,
-  });
-
-  if (!ownerRole) {
-    throw new NotFoundError("Default Owner role not found.");
-  }
+  const ownerRole = await getSystemRoleByName("Owner");
 
   const project = await Project.create({
     name: trimmedName,
@@ -437,7 +487,8 @@ export const getWorkspaceProjectsService = async (
 ): Promise<any[]> => {
   assertValidObjectIds({ workspaceId, userId });
 
-  const workspace = await Workspace.findById(workspaceId);
+  const workspace =
+    await Workspace.findById(workspaceId).populate("members.role");
 
   if (!workspace) {
     throw new NotFoundError("Workspace not found.");

@@ -1,8 +1,8 @@
-import { Document, Schema, model, Types } from "mongoose";
+import { Document, Schema, Types, model } from "mongoose";
 
 export interface IRole extends Document {
   name: string;
-  workspace?: Types.ObjectId | null;
+  workspace: Types.ObjectId | null;
   permissions: string[];
   isSystem: boolean;
   createdAt: Date;
@@ -15,18 +15,22 @@ const roleSchema = new Schema<IRole>(
       type: String,
       required: true,
       trim: true,
+      minlength: 2,
+      maxlength: 50,
     },
+
     workspace: {
       type: Schema.Types.ObjectId,
       ref: "Workspace",
       default: null,
     },
-    permissions: [
-      {
-        type: String,
-        required: true,
-      },
-    ],
+
+    permissions: {
+      type: [String],
+      required: true,
+      default: [],
+    },
+
     isSystem: {
       type: Boolean,
       default: false,
@@ -38,7 +42,12 @@ const roleSchema = new Schema<IRole>(
   },
 );
 
-roleSchema.index({ name: 1, workspace: 1 }, { unique: true });
+roleSchema.index(
+  { name: 1, workspace: 1 },
+  {
+    unique: true,
+  },
+);
 
 roleSchema.set("toJSON", {
   transform: (_doc, ret: any) => {
@@ -49,4 +58,5 @@ roleSchema.set("toJSON", {
 });
 
 const Role = model<IRole>("Role", roleSchema);
+
 export default Role;

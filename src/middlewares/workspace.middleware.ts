@@ -1,6 +1,17 @@
 import { Request, Response, NextFunction } from "express";
-import Workspace from "../models/workspace.model";
+import { Document } from "mongoose";
+import Workspace, { IWorkspace } from "../models/workspace.model";
+import Role, { IRole } from "../models/role.model";
 import { ForbiddenError, NotFoundError } from "../utils/errors/app.error";
+
+declare global {
+  namespace Express {
+    interface Request {
+      workspace?: IWorkspace & Document;
+      workspaceRole?: "owner" | (IRole & Document);
+    }
+  }
+}
 
 export const checkWorkspaceAccess = async (
   req: Request,
@@ -18,14 +29,39 @@ export const checkWorkspaceAccess = async (
     }
 
     const isOwner = workspace.owner.toString() === userId;
-    const member = workspace.members.find((m) => m.user.toString() === userId);
 
-    if (!isOwner && !member) {
+    if (isOwner) {
+      req.workspace = workspace;
+      req.workspaceRole = "owner";
+
+      return next();
+    }
+
+    const member = workspace.members.find(
+      (member) => member.user.toString() === userId,
+    );
+
+    if (!member) {
       throw new ForbiddenError("You are not a member of this workspace");
     }
 
+    const role = await Role.findById(member.role);
+
+    if (!role) {
+      throw new NotFoundError("Workspace role not found");
+    }
+
+    if (
+      role.workspace &&
+      role.workspace.toString() !== workspace._id.toString()
+    ) {
+      throw new ForbiddenError(
+        "Invalid role assigned to this workspace member",
+      );
+    }
+
     req.workspace = workspace;
-    req.workspaceRole = isOwner ? "owner" : member!.role;
+    req.workspaceRole = role;
 
     next();
   } catch (err) {
@@ -38,11 +74,32 @@ export const requireWorkspaceAdmin = (
   res: Response,
   next: NextFunction,
 ) => {
-  if (req.workspaceRole !== "owner" && req.workspaceRole !== "admin") {
-    return next(new ForbiddenError("Admin access required"));
-  }
+  try {
+    const workspaceRole = req.workspaceRole;
 
-  next();
+    if (!workspaceRole) {
+      throw new ForbiddenError("Workspace access not verified.");
+    }
+
+    if (workspaceRole === "owner") {
+      return next();
+    }
+
+    const isAdmin =
+      workspaceRole.name === "Admin" ||
+      workspaceRole.name === "Owner" ||
+      workspaceRole.permissions?.includes("*");
+
+    if (!isAdmin) {
+      throw new ForbiddenError(
+        "You need admin or owner privileges to perform this action.",
+      );
+    }
+
+    next();
+  } catch (err) {
+    next(err);
+  }
 };
 
 export const requireWorkspaceOwner = (
@@ -50,11 +107,21 @@ export const requireWorkspaceOwner = (
   res: Response,
   next: NextFunction,
 ) => {
-  if (req.workspaceRole !== "owner") {
-    return next(
-      new ForbiddenError("Only workspace owner can perform this action."),
-    );
-  }
+  try {
+    const workspaceRole = req.workspaceRole;
 
-  next();
+    const isOwner =
+      workspaceRole === "owner" ||
+      (typeof workspaceRole === "object" && workspaceRole?.name === "Owner");
+
+    if (!isOwner) {
+      throw new ForbiddenError(
+        "Only the workspace owner can perform this action.",
+      );
+    }
+
+    next();
+  } catch (err) {
+    next(err);
+  }
 };

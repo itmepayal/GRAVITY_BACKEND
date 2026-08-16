@@ -2,7 +2,7 @@ import { Document, Schema, Types, model } from "mongoose";
 
 export interface IWorkspaceMember {
   user: Types.ObjectId;
-  role: "owner" | "admin" | "member";
+  role: Types.ObjectId;
   joinedAt: Date;
 }
 
@@ -17,6 +17,30 @@ export interface IWorkspace extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+const workspaceMemberSchema = new Schema<IWorkspaceMember>(
+  {
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    role: {
+      type: Schema.Types.ObjectId,
+      ref: "Role",
+      required: true,
+    },
+
+    joinedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    _id: false,
+  },
+);
 
 const workspaceSchema = new Schema<IWorkspace>(
   {
@@ -44,34 +68,20 @@ const workspaceSchema = new Schema<IWorkspace>(
     icon: {
       type: String,
       default: "",
+      trim: true,
     },
 
     owner: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
 
-    members: [
-      {
-        user: {
-          type: Schema.Types.ObjectId,
-          ref: "User",
-          required: true,
-        },
-
-        role: {
-          type: String,
-          enum: ["owner", "admin", "member"],
-          default: "member",
-        },
-
-        joinedAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
+    members: {
+      type: [workspaceMemberSchema],
+      default: [],
+    },
 
     isPrivate: {
       type: Boolean,
@@ -84,8 +94,17 @@ const workspaceSchema = new Schema<IWorkspace>(
   },
 );
 
-workspaceSchema.index({ owner: 1 });
 workspaceSchema.index({ "members.user": 1 });
+workspaceSchema.index({ owner: 1 });
+workspaceSchema.pre("validate", function (next) {
+  const userIds = this.members.map((member) => member.user.toString());
+
+  const uniqueUserIds = new Set(userIds);
+
+  if (userIds.length !== uniqueUserIds.size) {
+    return;
+  }
+});
 
 workspaceSchema.set("toJSON", {
   transform: (_doc, ret: any) => {
@@ -96,4 +115,5 @@ workspaceSchema.set("toJSON", {
 });
 
 const Workspace = model<IWorkspace>("Workspace", workspaceSchema);
+
 export default Workspace;

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import Project from "../models/project.model";
 import Workspace from "../models/workspace.model";
+import Role from "../models/role.model";
 import type { IRole } from "../models/role.model";
 import { ForbiddenError, NotFoundError } from "../utils/errors/app.error";
 
@@ -40,12 +41,18 @@ export const checkProjectAccess = async (
       (member) => member.user.toString() === userId,
     );
 
-    if (
-      wsMembership &&
-      (wsMembership.role === "owner" || wsMembership.role === "admin")
-    ) {
-      req.projectPermissions = ["*"];
-      return next();
+    if (wsMembership) {
+      const workspaceRole = await Role.findById(wsMembership.role);
+
+      const isWorkspaceAdminOrOwner =
+        workspaceRole?.name === "Owner" ||
+        workspaceRole?.name === "Admin" ||
+        workspaceRole?.permissions?.includes("*");
+
+      if (isWorkspaceAdminOrOwner) {
+        req.projectPermissions = ["*"];
+        return next();
+      }
     }
 
     const membership = project.members.find(

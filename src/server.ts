@@ -102,11 +102,9 @@ app.use(errorHandler);
 // =========================
 // Start Server
 // =========================
-
 const startServer = async () => {
   try {
     await connectDB();
-
     app.listen(serverConfig.PORT, () => {
       logger.info(`Server is running on port ${serverConfig.PORT}`);
       logger.info(`Swagger docs: ${serverConfig.API_URL}/api-docs`);

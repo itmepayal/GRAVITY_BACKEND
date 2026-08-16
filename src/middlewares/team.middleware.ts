@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import Team from "../models/team.model";
 import Workspace from "../models/workspace.model";
+import Role from "../models/role.model";
 import { ForbiddenError, NotFoundError } from "../utils/errors/app.error";
 
 export const checkTeamAccess = async (
@@ -39,7 +40,14 @@ export const checkTeamAccess = async (
       throw new ForbiddenError("You are not a member of this workspace.");
     }
 
-    if (workspaceMember.role === "admin") {
+    const workspaceRole = await Role.findById(workspaceMember.role);
+
+    const isWorkspaceAdmin =
+      workspaceRole?.name === "Admin" ||
+      workspaceRole?.name === "Owner" ||
+      workspaceRole?.permissions?.includes("*");
+
+    if (isWorkspaceAdmin) {
       req.teamPermissions = ["*"];
       return next();
     }

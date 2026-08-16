@@ -13,7 +13,7 @@ declare global {
       user?: JWTPayload;
 
       workspace?: IWorkspace;
-      workspaceRole?: "owner" | "admin" | "member";
+      workspaceRole?: IRole | "owner";
       workspaceId?: string;
 
       project?: IProject;

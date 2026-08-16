@@ -34,27 +34,35 @@ export const checkBoardAccess = async (
       return next();
     }
 
-    const workspace = await Workspace.findById(project.workspace);
+    const workspace = await Workspace.findById(project.workspace).populate(
+      "members.role",
+    );
 
     if (!workspace) {
       throw new NotFoundError("Workspace not found.");
     }
-
-    const wsMembership = workspace.members.find(
-      (member) => member.user.toString() === userId,
-    );
 
     if (workspace.owner.toString() === userId) {
       req.boardPermissions = ["*"];
       return next();
     }
 
-    if (
-      wsMembership &&
-      (wsMembership.role === "owner" || wsMembership.role === "admin")
-    ) {
-      req.boardPermissions = ["*"];
-      return next();
+    const wsMembership = workspace.members.find(
+      (member) => member.user.toString() === userId,
+    );
+
+    if (wsMembership) {
+      const workspaceRole = wsMembership.role as unknown as IRole;
+
+      const isWorkspaceAdminOrOwner =
+        workspaceRole?.name === "Owner" ||
+        workspaceRole?.name === "Admin" ||
+        workspaceRole?.permissions?.includes("*");
+
+      if (isWorkspaceAdminOrOwner) {
+        req.boardPermissions = ["*"];
+        return next();
+      }
     }
 
     const membership = project.members.find(
