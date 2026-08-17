@@ -1,21 +1,31 @@
+import mongoose from "mongoose";
 import Board, { IBoard } from "../../models/board.model";
 import Task from "../../models/task.model";
 import Project from "../../models/project.model";
 import { BadRequestError, NotFoundError } from "../../utils/errors/app.error";
 import { UpdateBoardSchemaType } from "../../validators/board.validator";
 
+const findBoardOrThrow = async (boardId: string): Promise<IBoard> => {
+  if (!mongoose.Types.ObjectId.isValid(boardId)) {
+    throw new NotFoundError("Board not found.");
+  }
+
+  const board = await Board.findById(boardId);
+
+  if (!board) {
+    throw new NotFoundError("Board not found.");
+  }
+
+  return board;
+};
+
 export const getAllUserBoardsService = async (userId: string) => {
   const accessibleProjects = await Project.find({
-    $or: [
-      { owner: userId },
-      { "members.user": userId },
-    ],
+    $or: [{ owner: userId }, { "members.user": userId }],
     isArchived: { $ne: true },
   }).select("_id");
 
-  const projectIds = accessibleProjects.map(
-    (project) => project._id,
-  );
+  const projectIds = accessibleProjects.map((project) => project._id);
 
   const boards = await Board.find({
     project: { $in: projectIds },
@@ -25,7 +35,6 @@ export const getAllUserBoardsService = async (userId: string) => {
 
   return boards;
 };
-
 
 export const getBoardWithTasksService = async (board: IBoard) => {
   const tasks = await Task.find({ board: board._id })
@@ -66,11 +75,7 @@ export const updateBoardService = async (
   boardId: string,
   data: UpdateBoardSchemaType,
 ): Promise<IBoard> => {
-  const board = await Board.findById(boardId);
-
-  if (!board) {
-    throw new NotFoundError("Board not found.");
-  }
+  const board = await findBoardOrThrow(boardId);
 
   if (data.name !== undefined) {
     board.name = data.name;
@@ -120,14 +125,18 @@ export const updateBoardService = async (
 export const deleteBoardService = async (
   boardId: string,
 ): Promise<{ message: string }> => {
-  const board = await Board.findById(boardId);
+  const board = await findBoardOrThrow(boardId);
 
-  if (!board) {
-    throw new NotFoundError("Board not found.");
+  const session = await mongoose.startSession();
+
+  try {
+    await session.withTransaction(async () => {
+      await Task.deleteMany({ board: boardId }, { session });
+      await board.deleteOne({ session });
+    });
+  } finally {
+    await session.endSession();
   }
-
-  await Task.deleteMany({ board: boardId });
-  await board.deleteOne();
 
   return { message: "Board deleted successfully." };
 };

@@ -7,7 +7,7 @@ import {
   getBoardWithTasksService,
   updateBoardService,
   deleteBoardService,
-  getAllUserBoardsService
+  getAllUserBoardsService,
 } from "./board.service";
 import { updateBoardSchema } from "../../validators/board.validator";
 
