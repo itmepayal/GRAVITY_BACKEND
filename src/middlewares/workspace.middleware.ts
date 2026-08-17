@@ -33,7 +33,6 @@ export const checkWorkspaceAccess = async (
     if (isOwner) {
       req.workspace = workspace;
       req.workspaceRole = "owner";
-
       return next();
     }
 
@@ -67,6 +66,36 @@ export const checkWorkspaceAccess = async (
   } catch (err) {
     next(err);
   }
+};
+
+const roleHasPermission = (
+  workspaceRole: "owner" | (IRole & Document) | undefined,
+  permission: string,
+): boolean => {
+  if (!workspaceRole) return false;
+  if (workspaceRole === "owner") return true;
+  const permissions = workspaceRole.permissions || [];
+  return permissions.includes("*") || permissions.includes(permission);
+};
+
+export const requirePermission = (permission: string) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.workspaceRole) {
+        throw new ForbiddenError("Workspace access not verified.");
+      }
+
+      if (!roleHasPermission(req.workspaceRole, permission)) {
+        throw new ForbiddenError(
+          `You do not have permission to perform this action (${permission}).`,
+        );
+      }
+
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
 };
 
 export const requireWorkspaceAdmin = (

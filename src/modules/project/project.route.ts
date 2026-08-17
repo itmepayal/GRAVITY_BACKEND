@@ -178,7 +178,9 @@ projectRouter.patch(
  *     summary: Remove a member from a project
  *     description: >
  *       Removes a member from a project. The project owner cannot be
- *       removed. Requires `member:remove` permission on the project.
+ *       removed, a member cannot remove themselves, and an Admin
+ *       cannot remove another Admin. Requires `member:remove`
+ *       permission on the project.
  *     tags:
  *       - Projects
  *     security:
@@ -206,7 +208,9 @@ projectRouter.patch(
  *             schema:
  *               $ref: '#/components/schemas/ProjectResponse'
  *       400:
- *         description: Attempted to remove the project owner
+ *         description: >
+ *           Attempted to remove the project owner, remove yourself, or
+ *           (as Admin) remove another Admin
  *         content:
  *           application/json:
  *             schema:

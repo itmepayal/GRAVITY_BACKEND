@@ -58,8 +58,15 @@ export const updateProjectMemberRoleController = asyncHandler(
 export const removeProjectMemberController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { projectId, userId } = req.params;
-    const project = await removeProjectMemberService(projectId, userId);
-    logger.info(`User ${userId} removed from project ${projectId}.`);
+    const currentUserId = req.user!.id;
+    const project = await removeProjectMemberService(
+      projectId,
+      currentUserId,
+      userId,
+    );
+    logger.info(
+      `User ${userId} removed from project ${projectId} by ${currentUserId}.`,
+    );
     AppResponse.success(
       res,
       StatusCodes.OK,

@@ -19,7 +19,7 @@ import {
 import { authenticate } from "../../middlewares/auth.middleware";
 import {
   checkWorkspaceAccess,
-  requireWorkspaceAdmin,
+  requirePermission,
   requireWorkspaceOwner,
 } from "../../middlewares/workspace.middleware";
 
@@ -113,7 +113,7 @@ workspaceRouter.get(
  * /workspaces/{workspaceId}:
  *   patch:
  *     tags: [Workspaces]
- *     summary: Update a workspace (admin or owner only)
+ *     summary: Update a workspace (requires "workspace:update" permission)
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -141,6 +141,12 @@ workspaceRouter.get(
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ApiErrorResponse'
+ *       403:
+ *         description: You do not have permission to perform this action.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiErrorResponse'
  *       404:
  *         description: Workspace not found.
  *         content:
@@ -152,7 +158,7 @@ workspaceRouter.patch(
   "/:workspaceId",
   authenticate,
   checkWorkspaceAccess,
-  requireWorkspaceAdmin,
+  requirePermission("workspace:update"),
   updateWorkspaceController,
 );
 
@@ -178,6 +184,12 @@ workspaceRouter.patch(
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/MessageOnlyResponse'
+ *       403:
+ *         description: Only the workspace owner can perform this action.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiErrorResponse'
  *       404:
  *         description: Workspace not found.
  *         content:
@@ -198,7 +210,7 @@ workspaceRouter.delete(
  * /workspaces/{workspaceId}/members:
  *   post:
  *     tags: [Workspaces]
- *     summary: Add a member to a workspace (admin or owner only)
+ *     summary: Add a member to a workspace (requires "member:add" permission)
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -226,6 +238,12 @@ workspaceRouter.delete(
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ApiErrorResponse'
+ *       403:
+ *         description: You do not have permission to perform this action.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiErrorResponse'
  *       404:
  *         description: Workspace or user not found.
  *         content:
@@ -237,7 +255,7 @@ workspaceRouter.post(
   "/:workspaceId/members",
   authenticate,
   checkWorkspaceAccess,
-  requireWorkspaceAdmin,
+  requirePermission("member:add"),
   addWorkspaceMemberController,
 );
 
@@ -246,7 +264,7 @@ workspaceRouter.post(
  * /workspaces/{workspaceId}/members/{userId}:
  *   patch:
  *     tags: [Workspaces]
- *     summary: Update a member's role in a workspace (admin or owner only)
+ *     summary: Update a member's role in a workspace (requires "member:update" permission)
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -279,6 +297,12 @@ workspaceRouter.post(
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ApiErrorResponse'
+ *       403:
+ *         description: You do not have permission to perform this action.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiErrorResponse'
  *       404:
  *         description: Workspace or member not found.
  *         content:
@@ -290,7 +314,7 @@ workspaceRouter.patch(
   "/:workspaceId/members/:userId",
   authenticate,
   checkWorkspaceAccess,
-  requireWorkspaceAdmin,
+  requirePermission("member:update"),
   updateWorkspaceMemberRoleController,
 );
 
@@ -299,7 +323,7 @@ workspaceRouter.patch(
  * /workspaces/{workspaceId}/members/{userId}:
  *   delete:
  *     tags: [Workspaces]
- *     summary: Remove a member from a workspace (admin or owner only)
+ *     summary: Remove a member from a workspace (requires "member:remove" permission)
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -326,6 +350,12 @@ workspaceRouter.patch(
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ApiErrorResponse'
+ *       403:
+ *         description: You do not have permission to perform this action.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiErrorResponse'
  *       404:
  *         description: Workspace or member not found.
  *         content:
@@ -337,7 +367,7 @@ workspaceRouter.delete(
   "/:workspaceId/members/:userId",
   authenticate,
   checkWorkspaceAccess,
-  requireWorkspaceAdmin,
+  requirePermission("member:remove"),
   removeWorkspaceMemberController,
 );
 
@@ -346,7 +376,7 @@ workspaceRouter.delete(
  * /workspaces/{workspaceId}/projects:
  *   post:
  *     tags: [Workspaces]
- *     summary: Create a project within a workspace (admin or owner only)
+ *     summary: Create a project within a workspace (requires "project:create" permission)
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -374,6 +404,12 @@ workspaceRouter.delete(
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ApiErrorResponse'
+ *       403:
+ *         description: You do not have permission to perform this action.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiErrorResponse'
  *       404:
  *         description: Workspace not found.
  *         content:
@@ -385,7 +421,7 @@ workspaceRouter.post(
   "/:workspaceId/projects",
   authenticate,
   checkWorkspaceAccess,
-  requireWorkspaceAdmin,
+  requirePermission("project:create"),
   createProjectController,
 );
 
@@ -469,7 +505,7 @@ workspaceRouter.get(
  * /workspaces/{workspaceId}/projects/{projectId}:
  *   patch:
  *     tags: [Workspaces]
- *     summary: Update a project (admin or owner only)
+ *     summary: Update a project (requires "project:update" permission)
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -502,6 +538,12 @@ workspaceRouter.get(
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ApiErrorResponse'
+ *       403:
+ *         description: You do not have permission to perform this action.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiErrorResponse'
  *       404:
  *         description: Project not found.
  *         content:
@@ -513,7 +555,7 @@ workspaceRouter.patch(
   "/:workspaceId/projects/:projectId",
   authenticate,
   checkWorkspaceAccess,
-  requireWorkspaceAdmin,
+  requirePermission("project:update"),
   updateProjectController,
 );
 
@@ -522,7 +564,7 @@ workspaceRouter.patch(
  * /workspaces/{workspaceId}/projects/{projectId}:
  *   delete:
  *     tags: [Workspaces]
- *     summary: Delete a project and its related data (admin or owner only)
+ *     summary: Delete a project and its related data (requires "project:delete" permission)
  *     description: Cascades to delete all tasks, boards, sprints, and goals under this project.
  *     security:
  *       - bearerAuth: []
@@ -544,6 +586,12 @@ workspaceRouter.patch(
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/MessageOnlyResponse'
+ *       403:
+ *         description: You do not have permission to perform this action.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiErrorResponse'
  *       404:
  *         description: Project not found.
  *         content:
@@ -555,7 +603,7 @@ workspaceRouter.delete(
   "/:workspaceId/projects/:projectId",
   authenticate,
   checkWorkspaceAccess,
-  requireWorkspaceAdmin,
+  requirePermission("project:delete"),
   deleteProjectController,
 );
 
@@ -593,7 +641,7 @@ workspaceRouter.get(
  * /workspaces/{workspaceId}/roles:
  *   post:
  *     tags: [Workspaces]
- *     summary: Create a custom role in a workspace (admin or owner only)
+ *     summary: Create a custom role in a workspace (requires "member:add" permission)
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -621,6 +669,12 @@ workspaceRouter.get(
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ApiErrorResponse'
+ *       403:
+ *         description: You do not have permission to perform this action.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiErrorResponse'
  *       409:
  *         description: A role with this name already exists in this workspace.
  *         content:
@@ -632,7 +686,7 @@ workspaceRouter.post(
   "/:workspaceId/roles",
   authenticate,
   checkWorkspaceAccess,
-  requireWorkspaceAdmin,
+  requirePermission("member:add"),
   createWorkspaceRoleController,
 );
 

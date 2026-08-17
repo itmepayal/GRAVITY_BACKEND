@@ -1,5 +1,9 @@
 import { Types } from "mongoose";
-import { BadRequestError, NotFoundError } from "../../utils/errors/app.error";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from "../../utils/errors/app.error";
 import User from "../../models/user.model";
 import Project, { IProject } from "../../models/project.model";
 import Role from "../../models/role.model";
@@ -146,22 +150,46 @@ export const updateProjectMemberRoleService = async (
 
 export const removeProjectMemberService = async (
   projectId: string,
+  currentUserId: string,
   userId: string,
 ): Promise<IProject> => {
-  const project = await Project.findById(projectId);
+  const project = await Project.findById(projectId).populate("members.role");
 
   if (!project) {
     throw new NotFoundError("Project not found.");
+  }
+
+  if (currentUserId === userId) {
+    throw new BadRequestError("You cannot remove yourself from the project.");
   }
 
   if (project.owner.toString() === userId) {
     throw new BadRequestError("Project owner cannot be removed.");
   }
 
-  const member = project.members.find((m) => m.user.toString() === userId);
+  const targetMember = project.members.find(
+    (m) => m.user.toString() === userId,
+  );
 
-  if (!member) {
+  if (!targetMember) {
     throw new NotFoundError("Member not found.");
+  }
+
+  const targetRoleName = (targetMember.role as any)?.name;
+
+  const currentMember = project.members.find(
+    (m) => m.user.toString() === currentUserId,
+  );
+
+  const currentRoleName = (currentMember?.role as any)?.name;
+
+  if (
+    currentRoleName &&
+    targetRoleName &&
+    currentRoleName === "Admin" &&
+    targetRoleName === "Admin"
+  ) {
+    throw new ForbiddenError("Admin cannot remove another admin.");
   }
 
   project.members = project.members.filter((m) => m.user.toString() !== userId);
