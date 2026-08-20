@@ -3,10 +3,15 @@ import { authenticate } from "../../middlewares/auth.middleware";
 import { attachRoleAndCheckAdminAccess } from "../../middlewares/role.middleware";
 import {
   getWorkspaceRolesController,
+  createWorkspaceRoleController,
+  getAllPermissionsController,
   updateWorkspaceRoleController,
   deleteWorkspaceRoleController,
 } from "./role.controller";
-import { checkWorkspaceAccess } from "../../middlewares/workspace.middleware";
+import {
+  checkWorkspaceAccess,
+  requireWorkspaceAdmin,
+} from "../../middlewares/workspace.middleware";
 
 const roleRouter = express.Router();
 
@@ -16,6 +21,12 @@ const roleRouter = express.Router();
  *   name: Roles
  *   description: Workspace role management APIs (list, update, and delete custom roles)
  */
+
+roleRouter.get(
+  "/permissions/all",
+  authenticate,
+  getAllPermissionsController,
+);
 
 /**
  * @swagger
@@ -64,6 +75,14 @@ roleRouter.get(
   authenticate,
   checkWorkspaceAccess,
   getWorkspaceRolesController,
+);
+
+roleRouter.post(
+  "/:workspaceId",
+  authenticate,
+  checkWorkspaceAccess,
+  requireWorkspaceAdmin,
+  createWorkspaceRoleController,
 );
 
 /**

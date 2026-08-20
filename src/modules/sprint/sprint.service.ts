@@ -4,6 +4,7 @@ import Sprint from "../../models/sprint.model";
 import Task from "../../models/task.model";
 import { BadRequestError, NotFoundError } from "../../utils/errors/app.error";
 import { UpdateSprintInput } from "../../validators/sprint.validation";
+import { createActivityLogService } from "../activity-log/activity-log.service";
 
 export const getSprintByIdService = async (sprintId: string) => {
   const sprint = await Sprint.findById(sprintId)
@@ -21,6 +22,7 @@ export const getSprintByIdService = async (sprintId: string) => {
 export const updateSprintService = async (
   sprintId: string,
   data: UpdateSprintInput,
+  userId?: string,
 ) => {
   const sprint = await Sprint.findById(sprintId);
 
@@ -75,6 +77,21 @@ export const updateSprintService = async (
 
   await sprint.save();
 
+  if (userId) {
+    try {
+      await createActivityLogService({
+        workspace: sprint.workspace,
+        actor: userId,
+        action: "updated",
+        entityType: "sprint",
+        entityId: sprint._id,
+        entityName: sprint.name,
+      });
+    } catch (err) {
+      // Non-blocking log safety
+    }
+  }
+
   return sprint;
 };
 
@@ -106,7 +123,7 @@ export const deleteSprintService = async (sprintId: string) => {
   return sprint;
 };
 
-export const startSprintService = async (sprintId: string) => {
+export const startSprintService = async (sprintId: string, userId?: string) => {
   const sprint = await Sprint.findById(sprintId);
   if (!sprint) {
     throw new NotFoundError("Sprint not found.");
@@ -127,10 +144,27 @@ export const startSprintService = async (sprintId: string) => {
   }
   sprint.status = "active";
   await sprint.save();
+
+  if (userId) {
+    try {
+      await createActivityLogService({
+        workspace: sprint.workspace,
+        actor: userId,
+        action: "status_changed",
+        entityType: "sprint",
+        entityId: sprint._id,
+        entityName: sprint.name,
+        metadata: { status: "active" },
+      });
+    } catch (err) {
+      // Non-blocking log safety
+    }
+  }
+
   return sprint;
 };
 
-export const completeSprintService = async (sprintId: string) => {
+export const completeSprintService = async (sprintId: string, userId?: string) => {
   const sprint = await Sprint.findById(sprintId);
 
   if (!sprint) {
@@ -157,6 +191,22 @@ export const completeSprintService = async (sprintId: string) => {
       },
     },
   );
+
+  if (userId) {
+    try {
+      await createActivityLogService({
+        workspace: sprint.workspace,
+        actor: userId,
+        action: "status_changed",
+        entityType: "sprint",
+        entityId: sprint._id,
+        entityName: sprint.name,
+        metadata: { status: "completed" },
+      });
+    } catch (err) {
+      // Non-blocking log safety
+    }
+  }
 
   return sprint;
 };

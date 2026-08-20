@@ -27,6 +27,45 @@ export const getWorkspaceRolesService = async (
     .lean();
 };
 
+export const createWorkspaceRoleService = async (
+  workspaceId: string,
+  data: { name: string; permissions: string[] },
+): Promise<IRole> => {
+  if (!Types.ObjectId.isValid(workspaceId)) {
+    throw new BadRequestError("Invalid workspace id.");
+  }
+
+  const trimmedName = data.name.trim();
+  const normalizedName = trimmedName.toLowerCase();
+
+  if (roleName.includes(normalizedName)) {
+    throw new BadRequestError(`"${trimmedName}" is a reserved role name.`);
+  }
+
+  const duplicate = await Role.findOne({
+    workspace: workspaceId,
+    name: {
+      $regex: `^${escapeRegex(normalizedName)}$`,
+      $options: "i",
+    },
+  });
+
+  if (duplicate) {
+    throw new ConflictError(
+      `A role named "${trimmedName}" already exists in this workspace.`,
+    );
+  }
+
+  const role = await Role.create({
+    name: trimmedName,
+    workspace: workspaceId,
+    permissions: data.permissions,
+    isSystem: false,
+  });
+
+  return role;
+};
+
 export const updateWorkspaceRoleService = async (
   workspaceId: string,
   roleId: string,

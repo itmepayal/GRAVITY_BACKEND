@@ -5,7 +5,6 @@ import {
   getWorkspaceByIdController,
   updateWorkspaceController,
   deleteWorkspaceController,
-  addWorkspaceMemberController,
   updateWorkspaceMemberRoleController,
   removeWorkspaceMemberController,
   createProjectController,
@@ -207,60 +206,6 @@ workspaceRouter.delete(
 
 /**
  * @swagger
- * /workspaces/{workspaceId}/members:
- *   post:
- *     tags: [Workspaces]
- *     summary: Add a member to a workspace (requires "member:add" permission)
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: workspaceId
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/AddWorkspaceMemberRequest'
- *     responses:
- *       200:
- *         description: Member added successfully.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/WorkspaceResponse'
- *       400:
- *         description: User is already a member.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiErrorResponse'
- *       403:
- *         description: You do not have permission to perform this action.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiErrorResponse'
- *       404:
- *         description: Workspace or user not found.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiErrorResponse'
- */
-workspaceRouter.post(
-  "/:workspaceId/members",
-  authenticate,
-  checkWorkspaceAccess,
-  requirePermission("member:add"),
-  addWorkspaceMemberController,
-);
-
-/**
- * @swagger
  * /workspaces/{workspaceId}/members/{userId}:
  *   patch:
  *     tags: [Workspaces]
@@ -304,7 +249,7 @@ workspaceRouter.post(
  *             schema:
  *               $ref: '#/components/schemas/ApiErrorResponse'
  *       404:
- *         description: Workspace or member not found.
+ *         description: Workspace, member, or role not found.
  *         content:
  *           application/json:
  *             schema:
@@ -686,6 +631,7 @@ workspaceRouter.post(
   "/:workspaceId/roles",
   authenticate,
   checkWorkspaceAccess,
+  requirePermission("role:create"),
   requirePermission("member:add"),
   createWorkspaceRoleController,
 );

@@ -41,6 +41,10 @@ const systemRoles = [
       "sprint:update",
       "sprint:delete",
 
+      // Role
+      "role:create",
+      "role:manage",
+
       // Tasks
       "task:create",
       "task:view",

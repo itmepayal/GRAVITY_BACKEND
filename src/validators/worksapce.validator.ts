@@ -36,16 +36,15 @@ export const createWorkspaceSchema = z.object({
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema>;
 
 export const addWorkspaceMemberSchema = z.object({
-  userId: z.string().trim().min(1, "User ID is required."),
-  role: z.enum(["admin", "member", "viewer"]),
+  email: z.string().email("Please provide a valid email address."),
+  roleId: z.string().min(1, "Role is required."),
+});
+
+export const updateWorkspaceMemberRoleSchema = z.object({
+  roleId: z.string().min(1, "Role is required."),
 });
 
 export type AddWorkspaceMemberInput = z.infer<typeof addWorkspaceMemberSchema>;
-
-export const updateWorkspaceMemberRoleSchema = z.object({
-  role: z.enum(["admin", "member", "viewer"]),
-});
-
 export type UpdateWorkspaceMemberRoleInput = z.infer<
   typeof updateWorkspaceMemberRoleSchema
 >;

@@ -4,12 +4,15 @@ import { StatusCodes } from "http-status-codes";
 import logger from "../../config/logger.config";
 import { AppResponse } from "../../utils/response/app.response";
 import {
+  createRoleSchema,
   getRolesParamSchema,
   roleIdParamSchema,
   updateRoleSchema,
+  VALID_PERMISSIONS,
 } from "../../validators/role.validation";
 import {
   getWorkspaceRolesService,
+  createWorkspaceRoleService,
   updateWorkspaceRoleService,
   deleteWorkspaceRoleService,
 } from "./role.service";
@@ -29,6 +32,40 @@ export const getWorkspaceRolesController = asyncHandler(
       StatusCodes.OK,
       "Roles fetched successfully.",
       roles,
+    );
+  },
+);
+
+export const createWorkspaceRoleController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { workspaceId } = getRolesParamSchema.parse({
+      params: req.params,
+    }).params;
+
+    const roleData = createRoleSchema.parse(req.body);
+
+    const role = await createWorkspaceRoleService(workspaceId, roleData);
+
+    logger.info(
+      `Role ${role.name} created successfully in workspace ${workspaceId}.`,
+    );
+
+    AppResponse.success(
+      res,
+      StatusCodes.CREATED,
+      "Role created successfully.",
+      role,
+    );
+  },
+);
+
+export const getAllPermissionsController = asyncHandler(
+  async (_req: Request, res: Response): Promise<void> => {
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      "Permissions list fetched successfully.",
+      VALID_PERMISSIONS,
     );
   },
 );

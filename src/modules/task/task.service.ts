@@ -14,6 +14,7 @@ import { CreateTaskSchemaType } from "../../validators/task.validator";
 import { UPDATABLE_TASK_FIELDS } from "./task.constant";
 import { TaskListFilters } from "./task.types";
 import { deleteFromCloudinary } from "../../config/cloudinary.config";
+import { createActivityLogService } from "../activity-log/activity-log.service";
 
 export const createTaskService = async (
   userId: string,
@@ -57,6 +58,21 @@ export const createTaskService = async (
     ...data,
     createdBy: userId,
   });
+
+  // Automatically record Activity Log
+  try {
+    await createActivityLogService({
+      workspace: data.workspace,
+      actor: userId,
+      action: "created",
+      entityType: "task",
+      entityId: task._id,
+      entityName: task.title,
+      metadata: { priority: task.priority, status: task.status },
+    });
+  } catch (err) {
+    // Non-blocking log failure safety
+  }
 
   return task;
 };
@@ -105,6 +121,7 @@ export const getTaskByIdService = async (taskId: string) => {
 export const updateTaskService = async (
   taskId: string,
   data: Record<string, any>,
+  userId?: string,
 ) => {
   const task = await Task.findById(taskId);
 
@@ -122,6 +139,8 @@ export const updateTaskService = async (
       throw new NotFoundError("Sprint not found.");
     }
   }
+
+  const oldStatus = task.status;
 
   for (const field of UPDATABLE_TASK_FIELDS) {
     if (field in data) {
@@ -153,14 +172,46 @@ export const updateTaskService = async (
     { path: "sprint", select: "name" },
   ]);
 
+  if (userId) {
+    try {
+      await createActivityLogService({
+        workspace: task.workspace,
+        actor: userId,
+        action: data.status && data.status !== oldStatus ? "status_changed" : "updated",
+        entityType: "task",
+        entityId: task._id,
+        entityName: task.title,
+        metadata: { oldStatus, newStatus: task.status },
+      });
+    } catch (err) {
+      // Non-blocking log safety
+    }
+  }
+
   return task;
 };
 
-export const deleteTaskService = async (taskId: string) => {
+export const deleteTaskService = async (taskId: string, userId?: string) => {
   const task = await Task.findByIdAndDelete(taskId);
   if (!task) {
     throw new NotFoundError("Task not found.");
   }
+
+  if (userId) {
+    try {
+      await createActivityLogService({
+        workspace: task.workspace,
+        actor: userId,
+        action: "deleted",
+        entityType: "task",
+        entityId: task._id,
+        entityName: task.title,
+      });
+    } catch (err) {
+      // Non-blocking log safety
+    }
+  }
+
   return task;
 };
 
@@ -182,6 +233,7 @@ export const archiveTaskService = async (
 export const moveTaskService = async (
   taskId: string,
   data: { column: string; status?: string },
+  userId?: string,
 ) => {
   const task = await Task.findById(taskId);
   if (!task) {
@@ -207,6 +259,23 @@ export const moveTaskService = async (
   }
 
   await task.save();
+
+  if (userId) {
+    try {
+      await createActivityLogService({
+        workspace: task.workspace,
+        actor: userId,
+        action: "status_changed",
+        entityType: "task",
+        entityId: task._id,
+        entityName: task.title,
+        metadata: { column: data.column, status: data.status },
+      });
+    } catch (err) {
+      // Non-blocking log safety
+    }
+  }
+
   return task;
 };
 

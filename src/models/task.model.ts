@@ -50,7 +50,9 @@ export interface ITask extends Document {
   priority: "low" | "medium" | "high" | "urgent";
 
   tags: string[];
+  labels?: Types.ObjectId[];
 
+  startDate?: Date;
   dueDate?: Date;
   completedAt?: Date;
 
@@ -150,6 +152,15 @@ const taskSchema = new Schema<ITask>(
         trim: true,
       },
     ],
+
+    labels: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Label",
+      },
+    ],
+
+    startDate: Date,
 
     dueDate: Date,
 

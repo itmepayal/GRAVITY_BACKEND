@@ -1,4 +1,5 @@
 import express from "express";
+
 import authRouter from "../../modules/auth/auth.router";
 import userRouter from "../../modules/user/user.route";
 import workspaceRouter from "../../modules/workspace/workspace.route";
@@ -9,6 +10,8 @@ import roleRouter from "../../modules/role/role.route";
 import taskRouter from "../../modules/task/task.route";
 import teamRouter from "../../modules/team/team.route";
 import goalRouter from "../../modules/goal/goal.router";
+import invitationRouter from "../../modules/invitation/invitation.route";
+import activityLogRouter from "../../modules/activity-log/activity-log.route";
 
 const v1Router = express.Router();
 
@@ -21,6 +24,7 @@ v1Router.get("/", (req, res) => {
     documentation: "/api-docs",
   });
 });
+
 v1Router.use("/auth", authRouter);
 v1Router.use("/users", userRouter);
 v1Router.use("/workspaces", workspaceRouter);
@@ -31,5 +35,7 @@ v1Router.use("/roles", roleRouter);
 v1Router.use("/tasks", taskRouter);
 v1Router.use("/teams", teamRouter);
 v1Router.use("/goals", goalRouter);
+v1Router.use("/invitations", invitationRouter);
+v1Router.use("/activity-logs", activityLogRouter);
 
 export default v1Router;

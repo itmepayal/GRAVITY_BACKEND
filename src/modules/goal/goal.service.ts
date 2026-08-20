@@ -10,6 +10,7 @@ import {
   UpdateGoalInput,
   GetWorkspaceGoalsQuery,
 } from "../../validators/goal.validator";
+import { createActivityLogService } from "../activity-log/activity-log.service";
 
 const escapeRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -70,6 +71,19 @@ export const createGoalService = async (
     targetDate: data.targetDate ? new Date(data.targetDate) : undefined,
   });
 
+  try {
+    await createActivityLogService({
+      workspace: workspaceId,
+      actor: userId,
+      action: "created",
+      entityType: "goal",
+      entityId: goal._id,
+      entityName: goal.title,
+    });
+  } catch (err) {
+    // Non-blocking log safety
+  }
+
   return goal.populate(GOAL_POPULATE);
 };
 
@@ -98,6 +112,7 @@ export const getGoalByIdService = async (goal: IGoal): Promise<IGoal> => {
 export const updateGoalService = async (
   goalId: string,
   data: UpdateGoalInput,
+  userId?: string,
 ): Promise<IGoal> => {
   const goal = await Goal.findById(goalId);
   if (!goal) throw new NotFoundError("Goal not found.");
@@ -159,6 +174,21 @@ export const updateGoalService = async (
   }
 
   await goal.save();
+
+  if (userId) {
+    try {
+      await createActivityLogService({
+        workspace: goal.workspace,
+        actor: userId,
+        action: "updated",
+        entityType: "goal",
+        entityId: goal._id,
+        entityName: goal.title,
+      });
+    } catch (err) {
+      // Non-blocking log safety
+    }
+  }
 
   return goal.populate(GOAL_POPULATE);
 };

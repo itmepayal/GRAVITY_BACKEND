@@ -14,7 +14,6 @@ import {
   CreateProjectInput,
   UpdateProjectInput,
 } from "../../validators/project.validator";
-import User from "../../models/user.model";
 import Project, { IProject } from "../../models/project.model";
 import Role, { IRole } from "../../models/role.model";
 import { escapeRegex } from "../../utils/helpers/regex";
@@ -24,6 +23,7 @@ import Task from "../../models/task.model";
 import Goal from "../../models/goal.model";
 import Team from "../../models/team.model";
 import { CreateRoleInput } from "../../validators/role.validation";
+import { createActivityLogService } from "../activity-log/activity-log.service";
 
 const assertValidObjectIds = (ids: Record<string, string>): void => {
   for (const [label, id] of Object.entries(ids)) {
@@ -138,6 +138,20 @@ export const createWorkspaceService = async (
   });
 
   await populateWorkspace(workspace);
+
+  // Automatically record Activity Log
+  try {
+    await createActivityLogService({
+      workspace: workspace._id,
+      actor: ownerId,
+      action: "created",
+      entityType: "workspace",
+      entityId: workspace._id,
+      entityName: workspace.name,
+    });
+  } catch (err) {
+    // Non-blocking log safety
+  }
 
   return formatWorkspaceResponse(workspace, ownerId);
 };
@@ -254,56 +268,13 @@ export const deleteWorkspaceService = async (
     await session.endSession();
   }
 };
-
-export const addWorkspaceMemberService = async (
-  workspaceId: string,
-  currentUserId: string,
-  userId: string,
-  roleName: "admin" | "member" | "viewer",
-) => {
-  assertValidObjectIds({ workspaceId, currentUserId, userId });
-
-  const workspace = await Workspace.findById(workspaceId);
-
-  if (!workspace) {
-    throw new NotFoundError("Workspace not found.");
-  }
-
-  const user = await User.findById(userId);
-
-  if (!user) {
-    throw new NotFoundError("User not found.");
-  }
-
-  const alreadyMember = workspace.members.some(
-    (member) => member.user.toString() === userId,
-  );
-
-  if (alreadyMember) {
-    throw new BadRequestError("User is already a member.");
-  }
-
-  const role = await getSystemRoleByName(roleName);
-
-  workspace.members.push({
-    user: new Types.ObjectId(userId),
-    role: role._id as unknown as Types.ObjectId,
-    joinedAt: new Date(),
-  });
-
-  await workspace.save();
-  await populateWorkspace(workspace);
-
-  return formatWorkspaceResponse(workspace, currentUserId);
-};
-
 export const updateWorkspaceMemberRoleService = async (
   workspaceId: string,
   currentUserId: string,
   userId: string,
-  roleName: "admin" | "member" | "viewer",
+  roleId: string,
 ) => {
-  assertValidObjectIds({ workspaceId, currentUserId, userId });
+  assertValidObjectIds({ workspaceId, currentUserId, userId, roleId });
 
   const workspace =
     await Workspace.findById(workspaceId).populate("members.role");
@@ -320,11 +291,22 @@ export const updateWorkspaceMemberRoleService = async (
 
   const currentRoleName = (member.role as any)?.name;
 
-  if (currentRoleName === "Owner") {
+  if (currentRoleName?.toLowerCase() === "owner") {
     throw new BadRequestError("Owner role cannot be changed.");
   }
 
-  const newRole = await getSystemRoleByName(roleName);
+  const newRole = await Role.findOne({
+    _id: roleId,
+    $or: [{ workspace: null }, { workspace: workspaceId }],
+  });
+
+  if (!newRole) {
+    throw new NotFoundError("Role not found in this workspace.");
+  }
+
+  if (newRole.name.toLowerCase() === "owner") {
+    throw new BadRequestError("Cannot assign Owner role to a member.");
+  }
 
   member.role = newRole._id as unknown as Types.ObjectId;
 
@@ -399,7 +381,6 @@ export const removeWorkspaceMemberService = async (
   );
 
   await workspace.save();
-
   await populateWorkspace(workspace);
 
   return formatWorkspaceResponse(workspace, currentUserId);
@@ -462,7 +443,7 @@ export const createProjectService = async (
     ],
   });
 
-  return await project.populate([
+  await project.populate([
     {
       path: "owner",
       select: "name email avatar",
@@ -479,6 +460,21 @@ export const createProjectService = async (
       path: "members.role",
     },
   ]);
+
+  try {
+    await createActivityLogService({
+      workspace: workspaceId,
+      actor: ownerId,
+      action: "created",
+      entityType: "project",
+      entityId: project._id,
+      entityName: project.name,
+    });
+  } catch (err) {
+    // Non-blocking log safety
+  }
+
+  return project;
 };
 
 export const getWorkspaceProjectsService = async (
@@ -499,6 +495,8 @@ export const getWorkspaceProjectsService = async (
   const projects = await Project.find({ workspace: workspaceId })
     .populate("owner", "name email avatar")
     .populate("workspace", "name color icon")
+    .populate("members.user", "name email avatar")
+    .populate("members.role")
     .sort({ createdAt: -1 });
 
   return projects.map((project) => ({
