@@ -14,12 +14,25 @@ import Sprint, { ISprint } from "../../models/sprint.model";
 import { GetProjectTasksQuery } from "./project.type";
 import Task from "../../models/task.model";
 import Goal from "../../models/goal.model";
+import { createActivityLogService } from "../activity-log/activity-log.service";
+
+const assertValidObjectIds = (ids: Record<string, string>): void => {
+  for (const [label, id] of Object.entries(ids)) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestError(`Invalid ${label}.`);
+    }
+  }
+};
 
 export const addProjectMemberService = async (
   projectId: string,
   userId: string,
   roleId: string,
+  actorId?: string,
 ): Promise<IProject> => {
+  assertValidObjectIds({ projectId, userId, roleId });
+  if (actorId) assertValidObjectIds({ actorId });
+
   const project = await Project.findById(projectId);
 
   if (!project) {
@@ -62,7 +75,7 @@ export const addProjectMemberService = async (
     throw new BadRequestError("Role does not belong to this workspace.");
   }
 
-  if (role.isSystem && role.name === "Owner") {
+  if (role.isSystem && role.name.toLowerCase() === "owner") {
     throw new BadRequestError("Owner role cannot be assigned.");
   }
 
@@ -88,6 +101,22 @@ export const addProjectMemberService = async (
     { path: "members.role" },
   ]);
 
+  if (actorId) {
+    try {
+      await createActivityLogService({
+        workspace: workspace._id,
+        actor: actorId,
+        action: "updated",
+        entityType: "project",
+        entityId: project._id,
+        entityName: project.name,
+        metadata: { addedMember: userId, role: role.name },
+      });
+    } catch (err) {
+      // Non-blocking log safety
+    }
+  }
+
   return project;
 };
 
@@ -95,7 +124,11 @@ export const updateProjectMemberRoleService = async (
   projectId: string,
   userId: string,
   roleId: string,
+  actorId?: string,
 ): Promise<IProject> => {
+  assertValidObjectIds({ projectId, userId, roleId });
+  if (actorId) assertValidObjectIds({ actorId });
+
   const project = await Project.findById(projectId);
 
   if (!project) {
@@ -132,7 +165,7 @@ export const updateProjectMemberRoleService = async (
     throw new BadRequestError("Role does not belong to this workspace.");
   }
 
-  if (role.isSystem && role.name === "Owner") {
+  if (role.isSystem && role.name.toLowerCase() === "owner") {
     throw new BadRequestError("Owner role cannot be assigned.");
   }
 
@@ -145,6 +178,22 @@ export const updateProjectMemberRoleService = async (
     { path: "members.role" },
   ]);
 
+  if (actorId) {
+    try {
+      await createActivityLogService({
+        workspace: workspace._id,
+        actor: actorId,
+        action: "updated",
+        entityType: "project",
+        entityId: project._id,
+        entityName: project.name,
+        metadata: { updatedMemberRole: userId, newRole: role.name },
+      });
+    } catch (err) {
+      // Non-blocking log safety
+    }
+  }
+
   return project;
 };
 
@@ -153,6 +202,8 @@ export const removeProjectMemberService = async (
   currentUserId: string,
   userId: string,
 ): Promise<IProject> => {
+  assertValidObjectIds({ projectId, currentUserId, userId });
+
   const project = await Project.findById(projectId).populate("members.role");
 
   if (!project) {
@@ -167,6 +218,26 @@ export const removeProjectMemberService = async (
     throw new BadRequestError("Project owner cannot be removed.");
   }
 
+  const isProjectOwner = project.owner.toString() === currentUserId;
+
+  const currentMember = project.members.find(
+    (m) => m.user.toString() === currentUserId,
+  );
+
+  if (!isProjectOwner && !currentMember) {
+    throw new ForbiddenError("You are not a member of this project.");
+  }
+
+  const currentRoleName = isProjectOwner
+    ? "owner"
+    : (currentMember?.role as any)?.name?.toLowerCase() || "member";
+
+  if (!isProjectOwner && currentRoleName !== "admin") {
+    throw new ForbiddenError(
+      "You do not have permission to remove project members.",
+    );
+  }
+
   const targetMember = project.members.find(
     (m) => m.user.toString() === userId,
   );
@@ -175,20 +246,9 @@ export const removeProjectMemberService = async (
     throw new NotFoundError("Member not found.");
   }
 
-  const targetRoleName = (targetMember.role as any)?.name;
+  const targetRoleName = (targetMember.role as any)?.name?.toLowerCase() || "member";
 
-  const currentMember = project.members.find(
-    (m) => m.user.toString() === currentUserId,
-  );
-
-  const currentRoleName = (currentMember?.role as any)?.name;
-
-  if (
-    currentRoleName &&
-    targetRoleName &&
-    currentRoleName === "Admin" &&
-    targetRoleName === "Admin"
-  ) {
+  if (currentRoleName === "admin" && targetRoleName === "admin") {
     throw new ForbiddenError("Admin cannot remove another admin.");
   }
 
@@ -201,6 +261,20 @@ export const removeProjectMemberService = async (
     { path: "members.role" },
   ]);
 
+  try {
+    await createActivityLogService({
+      workspace: project.workspace,
+      actor: currentUserId,
+      action: "updated",
+      entityType: "project",
+      entityId: project._id,
+      entityName: project.name,
+      metadata: { removedMember: userId },
+    });
+  } catch (err) {
+    // Non-blocking log safety
+  }
+
   return project;
 };
 
@@ -210,6 +284,8 @@ export const createBoardService = async (
   userId: string,
   data: any,
 ) => {
+  assertValidObjectIds({ projectId, workspaceId, userId });
+
   const board = await Board.create({
     ...data,
     project: projectId,
@@ -220,6 +296,7 @@ export const createBoardService = async (
 };
 
 export const listBoardsService = async (projectId: string) => {
+  assertValidObjectIds({ projectId });
   return Board.find({ project: projectId }).sort({ createdAt: -1 });
 };
 
@@ -228,6 +305,10 @@ export const createSprintService = async (
   project: IProject,
   userId: string,
 ): Promise<ISprint> => {
+  assertValidObjectIds({ userId });
+  if (data.board) assertValidObjectIds({ board: data.board });
+  if (data.goal) assertValidObjectIds({ goal: data.goal });
+
   const { name, goal, board, startDate, endDate } = data;
 
   const projectId = project._id.toString();
@@ -301,6 +382,8 @@ export const createSprintService = async (
 };
 
 export const getProjectSprintsService = async (projectId: string) => {
+  assertValidObjectIds({ projectId });
+
   const sprints = await Sprint.find({
     project: projectId,
   })
@@ -315,6 +398,11 @@ export const getProjectTasksService = async (
   projectId: string,
   query: GetProjectTasksQuery,
 ) => {
+  assertValidObjectIds({ projectId });
+  if (query.assignee) {
+    assertValidObjectIds({ assignee: query.assignee });
+  }
+
   const project = await Project.findById(projectId);
 
   if (!project) {

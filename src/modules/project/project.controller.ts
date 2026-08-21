@@ -24,8 +24,14 @@ import { createSprintSchema } from "../../validators/sprint.validator";
 export const addProjectMemberController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { projectId } = req.params;
+    const actorId = req.user!.id;
     const { userId, roleId } = addProjectMemberSchema.parse(req.body);
-    const project = await addProjectMemberService(projectId, userId, roleId);
+    const project = await addProjectMemberService(
+      projectId,
+      userId,
+      roleId,
+      actorId,
+    );
     logger.info(`User ${userId} added to project ${projectId}.`);
     AppResponse.success(
       res,
@@ -39,11 +45,13 @@ export const addProjectMemberController = asyncHandler(
 export const updateProjectMemberRoleController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { projectId, userId } = req.params;
+    const actorId = req.user!.id;
     const { roleId } = updateProjectMemberRoleSchema.parse(req.body);
     const project = await updateProjectMemberRoleService(
       projectId,
       userId,
       roleId,
+      actorId,
     );
     logger.info(`Role of user ${userId} updated in project ${projectId}.`);
     AppResponse.success(
