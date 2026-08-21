@@ -84,6 +84,30 @@ export const changeProfileService = async (
   return user;
 };
 
+export const updateNotificationPreferencesService = async (
+  userId: string,
+  preferences: {
+    emailNotifications?: boolean;
+    taskAssigned?: boolean;
+    mentionAlerts?: boolean;
+    weeklyDigest?: boolean;
+  },
+): Promise<IUser> => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new NotFoundError("User not found.");
+  }
+
+  user.notificationPreferences = {
+    ...user.notificationPreferences,
+    ...preferences,
+  } as any;
+
+  await user.save();
+  return user;
+};
+
 export const getAllUsersService = async (): Promise<IUser[]> => {
   const users = await User.find()
     .select("_id name email avatar")

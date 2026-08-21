@@ -7,7 +7,7 @@ export const createEmailInvitationSchema = z.object({
 });
 
 export const createInviteLinkSchema = z.object({
-  roleId: z.string().min(1, "roleId is required."),
+  roleId: z.string().optional(),
   expiresInDays: z.number().int().positive().max(90).optional(),
 });
 

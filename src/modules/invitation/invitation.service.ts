@@ -132,13 +132,28 @@ export const createEmailInvitationService = async (
 export const createInviteLinkService = async (
   workspaceId: string,
   invitedBy: string,
-  roleId: string,
+  roleId?: string,
   expiresInDays?: number,
 ) => {
-  assertValidObjectIds({ workspaceId, invitedBy, roleId });
+  if (!roleId) {
+    const defaultRole = await Role.findOne({
+      $or: [{ workspace: null }, { workspace: workspaceId }],
+      name: { $regex: /^member$/i },
+    });
+    if (defaultRole) {
+      roleId = defaultRole._id.toString();
+    } else {
+      const anyRole = await Role.findOne({
+        $or: [{ workspace: null }, { workspace: workspaceId }],
+      });
+      if (anyRole) roleId = anyRole._id.toString();
+    }
+  }
+
+  assertValidObjectIds({ workspaceId, invitedBy, roleId: roleId! });
 
   await assertCanManageMembers(workspaceId, invitedBy);
-  await assertValidRoleForWorkspace(roleId, workspaceId);
+  await assertValidRoleForWorkspace(roleId!, workspaceId);
 
   const invitation = await Invitation.create({
     workspace: workspaceId,

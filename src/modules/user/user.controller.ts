@@ -8,6 +8,7 @@ import {
   changeProfileService,
   getAllUsersService,
   getCurrentUserService,
+  updateNotificationPreferencesService,
 } from "./user.service";
 import {
   changePasswordSchema,
@@ -55,6 +56,20 @@ export const changeProfileController = asyncHandler(
       res,
       StatusCodes.OK,
       "Profile updated successfully.",
+      user,
+    );
+  },
+);
+
+export const updateNotificationPreferencesController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user!.id;
+    const user = await updateNotificationPreferencesService(userId, req.body);
+    logger.info("Notification preferences updated successfully.");
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      "Notification preferences updated successfully.",
       user,
     );
   },

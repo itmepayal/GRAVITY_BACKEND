@@ -51,6 +51,7 @@ export const taskListQuerySchema = z.object({
       .optional(),
     priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
     assignee: objectIdSchema.optional(),
+    team: objectIdSchema.optional(),
     isArchived: z
       .enum(["true", "false"])
       .optional()
@@ -122,6 +123,11 @@ export const createTaskSchema = z.object({
     .string()
     .regex(/^[0-9a-fA-F]{24}$/, "Invalid assignee id.")
     .optional(),
+  team: z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, "Invalid team id.")
+    .nullable()
+    .optional(),
   watchers: z
     .array(z.string().regex(/^[0-9a-fA-F]{24}$/))
     .optional()
@@ -169,6 +175,11 @@ export const updateTaskSchema = z.object({
     description: z.string().trim().max(2000).optional(),
     column: z.string().trim().min(1).max(100).optional(),
     assignee: z
+      .string()
+      .regex(/^[0-9a-fA-F]{24}$/)
+      .nullable()
+      .optional(),
+    team: z
       .string()
       .regex(/^[0-9a-fA-F]{24}$/)
       .nullable()
@@ -280,4 +291,20 @@ export const removeAttachmentSchema = z.object({
 
 export const updateActualHoursSchema = z.object({
   actualHours: z.number().min(0, "Actual hours cannot be negative"),
+});
+
+export const addDependencySchema = z.object({
+  params: z.object({
+    taskId: objectIdSchema,
+  }),
+  body: z.object({
+    blockerId: objectIdSchema,
+  }),
+});
+
+export const removeDependencySchema = z.object({
+  params: z.object({
+    taskId: objectIdSchema,
+    blockerId: objectIdSchema,
+  }),
 });

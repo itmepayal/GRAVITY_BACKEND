@@ -79,6 +79,22 @@ const options: swaggerJsdoc.Options = {
         name: "Activity Logs",
         description: "Audit trail and activity history logging APIs for workspaces and entities",
       },
+      {
+        name: "Time Entries",
+        description: "Time tracking work session logging APIs",
+      },
+      {
+        name: "Calendar Events",
+        description: "Calendar meetings, deadlines, and reminders management APIs",
+      },
+      {
+        name: "Labels",
+        description: "Workspace custom categorization labels APIs",
+      },
+      {
+        name: "Milestones",
+        description: "Gantt chart project milestone schedules and progress APIs",
+      },
     ],
 
     components: {

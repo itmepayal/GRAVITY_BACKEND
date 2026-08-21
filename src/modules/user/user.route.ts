@@ -135,4 +135,22 @@ userRouter.patch(
   userController.changeProfileController,
 );
 
+/**
+ * @swagger
+ * /users/notifications/preferences:
+ *   patch:
+ *     tags: [Users]
+ *     summary: Update notification preferences (email, task assignments, mentions, digest)
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Notification preferences updated successfully.
+ */
+userRouter.patch(
+  "/notifications/preferences",
+  authenticate,
+  userController.updateNotificationPreferencesController,
+);
+
 export default userRouter;

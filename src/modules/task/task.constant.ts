@@ -4,6 +4,7 @@ export const UPDATABLE_TASK_FIELDS = [
   "column",
   "sprint",
   "assignee",
+  "team",
   "watchers",
   "status",
   "priority",

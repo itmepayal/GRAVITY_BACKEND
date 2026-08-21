@@ -90,10 +90,14 @@ export const getAllTasksOfBoardService = async (
   if (filters.status) filter.status = filters.status;
   if (filters.priority) filter.priority = filters.priority;
   if (filters.assignee) filter.assignee = filters.assignee;
+  if (filters.team) filter.team = filters.team;
   filter.isArchived = filters.isArchived ?? false;
 
   const tasks = await Task.find(filter)
     .populate("assignee", "name email avatar")
+    .populate("team", "name color avatar")
+    .populate("blockedBy", "title status priority")
+    .populate("blocks", "title status priority")
     .populate("watchers", "name email avatar")
     .populate("createdBy", "name email avatar")
     .sort({ createdAt: -1 });
@@ -105,6 +109,9 @@ export const getTaskByIdService = async (taskId: string) => {
   const task = await Task.findById(taskId)
     .populate("createdBy", "name email avatar")
     .populate("assignee", "name email avatar")
+    .populate("team", "name color avatar")
+    .populate("blockedBy", "title status priority assignee")
+    .populate("blocks", "title status priority assignee")
     .populate("watchers", "name email avatar")
     .populate("board", "name")
     .populate("project", "name")
@@ -164,6 +171,9 @@ export const updateTaskService = async (
 
   await task.populate([
     { path: "assignee", select: "name email avatar" },
+    { path: "team", select: "name color avatar" },
+    { path: "blockedBy", select: "title status priority" },
+    { path: "blocks", select: "title status priority" },
     { path: "watchers", select: "name email avatar" },
     { path: "createdBy", select: "name email avatar" },
     { path: "board", select: "name" },
@@ -189,6 +199,128 @@ export const updateTaskService = async (
   }
 
   return task;
+};
+
+export const wouldCreateCycle = async (
+  taskId: Types.ObjectId,
+  newBlockerId: Types.ObjectId,
+): Promise<boolean> => {
+  const visited = new Set<string>();
+  const queue = [newBlockerId.toString()];
+
+  while (queue.length) {
+    const current = queue.shift()!;
+    if (current === taskId.toString()) return true;
+    if (visited.has(current)) continue;
+    visited.add(current);
+
+    const task = await Task.findById(current).select("blockedBy");
+    if (task && task.blockedBy) {
+      queue.push(...task.blockedBy.map((id) => id.toString()));
+    }
+  }
+  return false;
+};
+
+export const addDependencyService = async (
+  taskId: string,
+  blockerId: string,
+  userId?: string,
+) => {
+  if (taskId === blockerId) {
+    throw new BadRequestError("A task cannot depend on itself.");
+  }
+
+  const taskA = await Task.findById(taskId);
+  const taskB = await Task.findById(blockerId);
+
+  if (!taskA || !taskB) {
+    throw new NotFoundError("One or both tasks not found.");
+  }
+
+  const taskAObjectId = new Types.ObjectId(taskId);
+  const taskBObjectId = new Types.ObjectId(blockerId);
+
+  const isCycle = await wouldCreateCycle(taskAObjectId, taskBObjectId);
+  if (isCycle) {
+    throw new BadRequestError(
+      "Adding this dependency would create a circular dependency loop.",
+    );
+  }
+
+  await Task.findByIdAndUpdate(taskId, {
+    $addToSet: { blockedBy: taskBObjectId },
+  });
+
+  await Task.findByIdAndUpdate(blockerId, {
+    $addToSet: { blocks: taskAObjectId },
+  });
+
+  const updatedTask = await Task.findById(taskId)
+    .populate("blockedBy", "title status priority assignee")
+    .populate("blocks", "title status priority assignee");
+
+  if (userId) {
+    try {
+      await createActivityLogService({
+        workspace: taskA.workspace,
+        actor: userId,
+        action: "updated",
+        entityType: "task",
+        entityId: taskA._id,
+        entityName: taskA.title,
+        metadata: { blockedByAdded: blockerId },
+      });
+    } catch (err) {
+      // Non-blocking log safety
+    }
+  }
+
+  return updatedTask;
+};
+
+export const removeDependencyService = async (
+  taskId: string,
+  blockerId: string,
+  userId?: string,
+) => {
+  const taskA = await Task.findById(taskId);
+  if (!taskA) {
+    throw new NotFoundError("Task not found.");
+  }
+
+  const taskAObjectId = new Types.ObjectId(taskId);
+  const taskBObjectId = new Types.ObjectId(blockerId);
+
+  await Task.findByIdAndUpdate(taskId, {
+    $pull: { blockedBy: taskBObjectId },
+  });
+
+  await Task.findByIdAndUpdate(blockerId, {
+    $pull: { blocks: taskAObjectId },
+  });
+
+  const updatedTask = await Task.findById(taskId)
+    .populate("blockedBy", "title status priority assignee")
+    .populate("blocks", "title status priority assignee");
+
+  if (userId) {
+    try {
+      await createActivityLogService({
+        workspace: taskA.workspace,
+        actor: userId,
+        action: "updated",
+        entityType: "task",
+        entityId: taskA._id,
+        entityName: taskA.title,
+        metadata: { blockedByRemoved: blockerId },
+      });
+    } catch (err) {
+      // Non-blocking log safety
+    }
+  }
+
+  return updatedTask;
 };
 
 export const deleteTaskService = async (taskId: string, userId?: string) => {

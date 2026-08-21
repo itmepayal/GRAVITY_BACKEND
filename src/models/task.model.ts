@@ -37,15 +37,19 @@ export interface ITask extends Document {
   column: string;
 
   assignee?: Types.ObjectId;
+  team?: Types.ObjectId;
   watchers: Types.ObjectId[];
 
+  blockedBy: Types.ObjectId[];
+  blocks: Types.ObjectId[];
+
   status:
-    | "todo"
-    | "in_progress"
-    | "in_review"
-    | "testing"
-    | "completed"
-    | "blocked";
+  | "todo"
+  | "in_progress"
+  | "in_review"
+  | "testing"
+  | "completed"
+  | "blocked";
 
   priority: "low" | "medium" | "high" | "urgent";
 
@@ -120,6 +124,12 @@ const taskSchema = new Schema<ITask>(
       ref: "User",
     },
 
+    team: {
+      type: Schema.Types.ObjectId,
+      ref: "Team",
+      default: null,
+    },
+
     watchers: [
       {
         type: Schema.Types.ObjectId,
@@ -157,6 +167,20 @@ const taskSchema = new Schema<ITask>(
       {
         type: Schema.Types.ObjectId,
         ref: "Label",
+      },
+    ],
+
+    blockedBy: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Task",
+      },
+    ],
+
+    blocks: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Task",
       },
     ],
 
@@ -264,6 +288,9 @@ taskSchema.index({ project: 1 });
 taskSchema.index({ board: 1 });
 taskSchema.index({ sprint: 1 });
 taskSchema.index({ assignee: 1 });
+taskSchema.index({ team: 1 });
+taskSchema.index({ blockedBy: 1 });
+taskSchema.index({ blocks: 1 });
 taskSchema.index({ status: 1 });
 taskSchema.index({ priority: 1 });
 taskSchema.index({ dueDate: 1 });

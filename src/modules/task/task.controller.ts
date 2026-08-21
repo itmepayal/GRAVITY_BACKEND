@@ -110,13 +110,14 @@ export const getAllTasksOfBoardController = asyncHandler(
       params: req.params,
     }).params;
 
-    const { status, priority, assignee, isArchived } =
+    const { status, priority, assignee, team, isArchived } =
       taskListQuerySchema.parse({ query: req.query }).query;
 
     const tasks = await getAllTasksOfBoardService(boardId, {
       status,
       priority,
       assignee,
+      team,
       isArchived,
     });
 

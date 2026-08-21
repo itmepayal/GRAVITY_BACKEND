@@ -20,6 +20,12 @@ export interface IUser extends Document {
   twoFAExpire?: Date;
   requiresTwoFA?: boolean;
   refreshToken?: string;
+  notificationPreferences?: {
+    emailNotifications: boolean;
+    taskAssigned: boolean;
+    mentionAlerts: boolean;
+    weeklyDigest: boolean;
+  };
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -130,6 +136,13 @@ const userSchema = new Schema<IUser>(
       type: String,
       default: null,
       select: false,
+    },
+
+    notificationPreferences: {
+      emailNotifications: { type: Boolean, default: true },
+      taskAssigned: { type: Boolean, default: true },
+      mentionAlerts: { type: Boolean, default: true },
+      weeklyDigest: { type: Boolean, default: false },
     },
   },
   {

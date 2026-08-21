@@ -12,6 +12,10 @@ import teamRouter from "../../modules/team/team.route";
 import goalRouter from "../../modules/goal/goal.router";
 import invitationRouter from "../../modules/invitation/invitation.route";
 import activityLogRouter from "../../modules/activity-log/activity-log.route";
+import timeEntryRouter from "../../modules/time-entry/time-entry.route";
+import calendarEventRouter from "../../modules/calendar-event/calendar-event.route";
+import labelRouter from "../../modules/label/label.route";
+import milestoneRouter from "../../modules/milestone/milestone.route";
 
 const v1Router = express.Router();
 
@@ -37,5 +41,9 @@ v1Router.use("/teams", teamRouter);
 v1Router.use("/goals", goalRouter);
 v1Router.use("/invitations", invitationRouter);
 v1Router.use("/activity-logs", activityLogRouter);
+v1Router.use("/time-entries", timeEntryRouter);
+v1Router.use("/calendar-events", calendarEventRouter);
+v1Router.use("/labels", labelRouter);
+v1Router.use("/milestones", milestoneRouter);
 
 export default v1Router;
