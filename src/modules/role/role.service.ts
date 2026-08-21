@@ -7,7 +7,7 @@ import {
 } from "../../utils/errors/app.error";
 import Project from "../../models/project.model";
 import Role, { IRole } from "../../models/role.model";
-import { UpdateRoleInput } from "../../validators/role.validation";
+import { UpdateRoleInput } from "../../validators/role.validator";
 import { roleName, escapeRegex } from "./role.constant";
 
 export const getWorkspaceRolesService = async (

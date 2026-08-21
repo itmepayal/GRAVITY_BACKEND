@@ -6,7 +6,7 @@ import { AppResponse } from "../../utils/response/app.response";
 import {
   sprintIdParamSchema,
   updateSprintSchema,
-} from "../../validators/sprint.validation";
+} from "../../validators/sprint.validator";
 import {
   getSprintByIdService,
   updateSprintService,

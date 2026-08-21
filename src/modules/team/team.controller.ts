@@ -8,7 +8,7 @@ import {
   updateTeamSchema,
   addTeamMemberSchema,
   changeTeamLeadSchema,
-} from "../../validators/team.validation";
+} from "../../validators/team.validator";
 import {
   createTeamService,
   getWorkspaceTeamsService,

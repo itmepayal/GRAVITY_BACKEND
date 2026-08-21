@@ -6,7 +6,7 @@ import { BadRequestError, NotFoundError } from "../../utils/errors/app.error";
 import {
   CreateTeamInput,
   UpdateTeamInput,
-} from "../../validators/team.validation";
+} from "../../validators/team.validator";
 
 export const createTeamService = async (
   workspaceId: string,

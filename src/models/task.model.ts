@@ -37,7 +37,7 @@ export interface ITask extends Document {
   column: string;
 
   assignee?: Types.ObjectId;
-  team?: Types.ObjectId;
+  team?: Types.ObjectId | null;
   watchers: Types.ObjectId[];
 
   blockedBy: Types.ObjectId[];

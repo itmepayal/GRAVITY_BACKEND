@@ -9,7 +9,7 @@ import Project, { IProject } from "../../models/project.model";
 import Role from "../../models/role.model";
 import Workspace from "../../models/workspace.model";
 import Board from "../../models/board.model";
-import { CreateSprintInput } from "../../validators/sprint.validation";
+import { CreateSprintInput } from "../../validators/sprint.validator";
 import Sprint, { ISprint } from "../../models/sprint.model";
 import { GetProjectTasksQuery } from "./project.type";
 import Task from "../../models/task.model";

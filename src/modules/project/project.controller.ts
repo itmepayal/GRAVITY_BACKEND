@@ -19,7 +19,7 @@ import { StatusCodes } from "http-status-codes";
 import logger from "../../config/logger.config";
 import { AppResponse } from "../../utils/response/app.response";
 import { createBoardSchema } from "../../validators/board.validator";
-import { createSprintSchema } from "../../validators/sprint.validation";
+import { createSprintSchema } from "../../validators/sprint.validator";
 
 export const addProjectMemberController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {

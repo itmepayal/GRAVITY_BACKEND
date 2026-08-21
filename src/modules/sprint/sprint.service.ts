@@ -3,7 +3,7 @@ import Goal from "../../models/goal.model";
 import Sprint from "../../models/sprint.model";
 import Task from "../../models/task.model";
 import { BadRequestError, NotFoundError } from "../../utils/errors/app.error";
-import { UpdateSprintInput } from "../../validators/sprint.validation";
+import { UpdateSprintInput } from "../../validators/sprint.validator";
 import { createActivityLogService } from "../activity-log/activity-log.service";
 
 export const getSprintByIdService = async (sprintId: string) => {

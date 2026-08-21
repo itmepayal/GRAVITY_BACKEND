@@ -9,7 +9,7 @@ import {
   roleIdParamSchema,
   updateRoleSchema,
   VALID_PERMISSIONS,
-} from "../../validators/role.validation";
+} from "../../validators/role.validator";
 import {
   getWorkspaceRolesService,
   createWorkspaceRoleService,

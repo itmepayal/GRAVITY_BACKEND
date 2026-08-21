@@ -23,7 +23,7 @@ import {
   createWorkspaceSchema,
   updateWorkspaceMemberRoleSchema,
   updateWorkspaceSchema,
-} from "../../validators/worksapce.validator";
+} from "../../validators/workspace.validator";
 import {
   createProjectSchema,
   updateProjectSchema,
@@ -31,7 +31,7 @@ import {
 import {
   createRoleSchema,
   getRolesParamSchema,
-} from "../../validators/role.validation";
+} from "../../validators/role.validator";
 
 export const createWorkspaceController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
@@ -102,7 +102,8 @@ export const updateWorkspaceController = asyncHandler(
 export const deleteWorkspaceController = asyncHandler(
   async (req: Request, res: Response) => {
     const { workspaceId } = req.params;
-    await deleteWorkspaceService(workspaceId);
+    const userId = req.user!.id;
+    await deleteWorkspaceService(workspaceId, userId);
     AppResponse.success(
       res,
       StatusCodes.OK,

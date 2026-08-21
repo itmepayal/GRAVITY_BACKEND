@@ -9,7 +9,7 @@ import {
 import {
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
-} from "../../validators/worksapce.validator";
+} from "../../validators/workspace.validator";
 import {
   CreateProjectInput,
   UpdateProjectInput,
@@ -22,7 +22,7 @@ import Board from "../../models/board.model";
 import Task from "../../models/task.model";
 import Goal from "../../models/goal.model";
 import Team from "../../models/team.model";
-import { CreateRoleInput } from "../../validators/role.validation";
+import { CreateRoleInput } from "../../validators/role.validator";
 import { createActivityLogService } from "../activity-log/activity-log.service";
 
 const assertValidObjectIds = (ids: Record<string, string>): void => {
@@ -238,8 +238,12 @@ export const updateWorkspaceService = async (
 
 export const deleteWorkspaceService = async (
   workspaceId: string,
+  currentUserId?: string,
 ): Promise<void> => {
   assertValidObjectIds({ workspaceId });
+  if (currentUserId) {
+    assertValidObjectIds({ currentUserId });
+  }
 
   const session = await mongoose.startSession();
 
@@ -249,6 +253,10 @@ export const deleteWorkspaceService = async (
 
       if (!workspace) {
         throw new NotFoundError("Workspace not found.");
+      }
+
+      if (currentUserId && workspace.owner.toString() !== currentUserId) {
+        throw new ForbiddenError("Only the workspace owner can delete this workspace.");
       }
 
       await Task.deleteMany({ workspace: workspaceId }).session(session);
@@ -283,15 +291,37 @@ export const updateWorkspaceMemberRoleService = async (
     throw new NotFoundError("Workspace not found.");
   }
 
-  const member = workspace.members.find((m) => m.user.toString() === userId);
+  const isOwner = workspace.owner.toString() === currentUserId;
 
-  if (!member) {
+  const currentMember = workspace.members.find(
+    (member) => member.user.toString() === currentUserId,
+  );
+
+  if (!isOwner && !currentMember) {
+    throw new ForbiddenError("You are not a member of this workspace.");
+  }
+
+  const currentRoleName = isOwner
+    ? "owner"
+    : (currentMember?.role as any)?.name?.toLowerCase();
+
+  if (currentRoleName !== "owner" && currentRoleName !== "admin") {
+    throw new ForbiddenError(
+      "You do not have permission to update workspace member roles.",
+    );
+  }
+
+  const targetMember = workspace.members.find(
+    (m) => m.user.toString() === userId,
+  );
+
+  if (!targetMember) {
     throw new NotFoundError("Member not found.");
   }
 
-  const currentRoleName = (member.role as any)?.name;
+  const targetRoleName = (targetMember.role as any)?.name;
 
-  if (currentRoleName?.toLowerCase() === "owner") {
+  if (targetRoleName?.toLowerCase() === "owner") {
     throw new BadRequestError("Owner role cannot be changed.");
   }
 
@@ -308,7 +338,7 @@ export const updateWorkspaceMemberRoleService = async (
     throw new BadRequestError("Cannot assign Owner role to a member.");
   }
 
-  member.role = newRole._id as unknown as Types.ObjectId;
+  targetMember.role = newRole._id as unknown as Types.ObjectId;
 
   await workspace.save();
   await populateWorkspace(workspace);
@@ -397,6 +427,15 @@ export const createProjectService = async (
 
   if (!workspace) {
     throw new NotFoundError("Workspace not found.");
+  }
+
+  const isOwner = workspace.owner.toString() === ownerId;
+  const isMember = workspace.members.some(
+    (m) => m.user.toString() === ownerId,
+  );
+
+  if (!isOwner && !isMember) {
+    throw new ForbiddenError("You must be a member of this workspace to create a project.");
   }
 
   const trimmedName = data.name.trim();
