@@ -34,12 +34,13 @@ export const getSprintByIdController = asyncHandler(
 
 export const updateSprintController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user!.id;
     const { sprintId } = sprintIdParamSchema.parse({
       params: req.params,
     }).params;
     const body = updateSprintSchema.parse(req.body);
-    const sprint = await updateSprintService(sprintId, body);
-    logger.info(`Sprint ${sprintId} updated successfully.`);
+    const sprint = await updateSprintService(sprintId, body, userId);
+    logger.info(`Sprint ${sprintId} updated successfully by user ${userId}.`);
     AppResponse.success(
       res,
       StatusCodes.OK,
@@ -51,11 +52,12 @@ export const updateSprintController = asyncHandler(
 
 export const deleteSprintController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user!.id;
     const { sprintId } = sprintIdParamSchema.parse({
       params: req.params,
     }).params;
-    const sprint = await deleteSprintService(sprintId);
-    logger.info(`Sprint ${sprintId} deleted successfully.`);
+    const sprint = await deleteSprintService(sprintId, userId);
+    logger.info(`Sprint ${sprintId} deleted successfully by user ${userId}.`);
     AppResponse.success(
       res,
       StatusCodes.OK,
@@ -67,11 +69,12 @@ export const deleteSprintController = asyncHandler(
 
 export const startSprintController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user!.id;
     const { sprintId } = sprintIdParamSchema.parse({
       params: req.params,
     }).params;
-    const sprint = await startSprintService(sprintId);
-    logger.info(`Sprint ${sprintId} started successfully.`);
+    const sprint = await startSprintService(sprintId, userId);
+    logger.info(`Sprint ${sprintId} started successfully by user ${userId}.`);
     AppResponse.success(
       res,
       StatusCodes.OK,
@@ -83,11 +86,12 @@ export const startSprintController = asyncHandler(
 
 export const completeSprintController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user!.id;
     const { sprintId } = sprintIdParamSchema.parse({
       params: req.params,
     }).params;
-    const sprint = await completeSprintService(sprintId);
-    logger.info(`Sprint ${sprintId} completed successfully.`);
+    const sprint = await completeSprintService(sprintId, userId);
+    logger.info(`Sprint ${sprintId} completed successfully by user ${userId}.`);
     AppResponse.success(
       res,
       StatusCodes.OK,

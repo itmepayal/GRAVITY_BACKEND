@@ -341,10 +341,14 @@ export const createSprintService = async (
     const goalExists = await Goal.findOne({
       _id: new Types.ObjectId(goal),
       workspace: new Types.ObjectId(workspaceId),
+      $or: [
+        { project: new Types.ObjectId(projectId) },
+        { project: null },
+      ],
     });
 
     if (!goalExists) {
-      throw new NotFoundError("Goal not found in this workspace.");
+      throw new NotFoundError("Goal not found in this workspace or project.");
     }
   }
 

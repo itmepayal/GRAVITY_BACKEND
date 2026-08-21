@@ -46,6 +46,7 @@ export const updateSprintService = async (
   if (data.board) {
     const boardExists = await Board.findOne({
       _id: data.board,
+      workspace: sprint.workspace,
       project: sprint.project,
     });
 
@@ -58,11 +59,11 @@ export const updateSprintService = async (
     const goalExists = await Goal.findOne({
       _id: data.goal,
       workspace: sprint.workspace,
-      project: sprint.project,
+      $or: [{ project: sprint.project }, { project: null }],
     });
 
     if (!goalExists) {
-      throw new NotFoundError("Goal not found in this project.");
+      throw new NotFoundError("Goal not found in this workspace or project.");
     }
   }
 
@@ -95,7 +96,10 @@ export const updateSprintService = async (
   return sprint;
 };
 
-export const deleteSprintService = async (sprintId: string) => {
+export const deleteSprintService = async (
+  sprintId: string,
+  userId?: string,
+) => {
   const sprint = await Sprint.findById(sprintId);
 
   if (!sprint) {
@@ -119,6 +123,21 @@ export const deleteSprintService = async (sprintId: string) => {
   }
 
   await sprint.deleteOne();
+
+  if (userId) {
+    try {
+      await createActivityLogService({
+        workspace: sprint.workspace,
+        actor: userId,
+        action: "deleted",
+        entityType: "sprint",
+        entityId: sprint._id,
+        entityName: sprint.name,
+      });
+    } catch (err) {
+      // Non-blocking log safety
+    }
+  }
 
   return sprint;
 };
