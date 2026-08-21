@@ -17,6 +17,7 @@ export type ActivityEntityType =
   | "sprint"
   | "goal"
   | "team"
+  | "label"
   | "workspace";
 
 export interface IActivityLog extends Document {

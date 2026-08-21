@@ -15,6 +15,7 @@ import { GetProjectTasksQuery } from "./project.type";
 import Task from "../../models/task.model";
 import Goal from "../../models/goal.model";
 import { createActivityLogService } from "../activity-log/activity-log.service";
+import logger from "../../config/logger.config";
 
 const assertValidObjectIds = (ids: Record<string, string>): void => {
   for (const [label, id] of Object.entries(ids)) {
@@ -113,7 +114,7 @@ export const addProjectMemberService = async (
         metadata: { addedMember: userId, role: role.name },
       });
     } catch (err) {
-      // Non-blocking log safety
+      logger.error("Activity log creation failed on project member add:", err);
     }
   }
 
@@ -190,7 +191,7 @@ export const updateProjectMemberRoleService = async (
         metadata: { updatedMemberRole: userId, newRole: role.name },
       });
     } catch (err) {
-      // Non-blocking log safety
+      logger.error("Activity log creation failed on project role update:", err);
     }
   }
 
@@ -272,7 +273,7 @@ export const removeProjectMemberService = async (
       metadata: { removedMember: userId },
     });
   } catch (err) {
-    // Non-blocking log safety
+    logger.error("Activity log creation failed on project member remove:", err);
   }
 
   return project;

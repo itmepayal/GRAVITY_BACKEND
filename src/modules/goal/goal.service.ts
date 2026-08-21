@@ -11,6 +11,7 @@ import {
   GetWorkspaceGoalsQuery,
 } from "../../validators/goal.validator";
 import { createActivityLogService } from "../activity-log/activity-log.service";
+import logger from "../../config/logger.config";
 
 const escapeRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -61,30 +62,39 @@ export const createGoalService = async (
     );
   }
 
-  const goal = await Goal.create({
-    title: trimmedTitle,
-    description: data.description,
-    workspace: new Types.ObjectId(workspaceId),
-    project: data.project ? new Types.ObjectId(data.project) : undefined,
-    owner: new Types.ObjectId(userId),
-    createdBy: new Types.ObjectId(userId),
-    targetDate: data.targetDate ? new Date(data.targetDate) : undefined,
-  });
-
   try {
-    await createActivityLogService({
-      workspace: workspaceId,
-      actor: userId,
-      action: "created",
-      entityType: "goal",
-      entityId: goal._id,
-      entityName: goal.title,
+    const goal = await Goal.create({
+      title: trimmedTitle,
+      description: data.description,
+      workspace: new Types.ObjectId(workspaceId),
+      project: data.project ? new Types.ObjectId(data.project) : undefined,
+      owner: new Types.ObjectId(userId),
+      createdBy: new Types.ObjectId(userId),
+      targetDate: data.targetDate ? new Date(data.targetDate) : undefined,
     });
-  } catch (err) {
-    // Non-blocking log safety
-  }
 
-  return goal.populate(GOAL_POPULATE);
+    try {
+      await createActivityLogService({
+        workspace: workspaceId,
+        actor: userId,
+        action: "created",
+        entityType: "goal",
+        entityId: goal._id,
+        entityName: goal.title,
+      });
+    } catch (err) {
+      logger.error("Activity log creation failed on goal create:", err);
+    }
+
+    return goal.populate(GOAL_POPULATE);
+  } catch (error: any) {
+    if (error.code === 11000) {
+      throw new BadRequestError(
+        "Goal with this title already exists in this workspace.",
+      );
+    }
+    throw error;
+  }
 };
 
 export const getWorkspaceGoalsService = async (
@@ -117,6 +127,17 @@ export const updateGoalService = async (
   const goal = await Goal.findById(goalId);
   if (!goal) throw new NotFoundError("Goal not found.");
 
+  if (
+    goal.status === "completed" &&
+    data.progress !== undefined &&
+    data.progress !== 100 &&
+    (data.status === undefined || data.status === "completed")
+  ) {
+    throw new BadRequestError(
+      "Change status away from completed before adjusting progress below 100%.",
+    );
+  }
+
   if (data.title !== undefined) {
     const trimmedTitle = data.title.trim();
 
@@ -147,8 +168,9 @@ export const updateGoalService = async (
   }
 
   if (data.description !== undefined) goal.description = data.description;
-  if (data.targetDate !== undefined)
-    goal.targetDate = new Date(data.targetDate);
+  if (data.targetDate !== undefined) {
+    goal.targetDate = data.targetDate ? new Date(data.targetDate) : undefined;
+  }
 
   if (data.progress !== undefined) {
     goal.progress = data.progress;
@@ -167,13 +189,18 @@ export const updateGoalService = async (
     }
   } else {
     goal.completedAt = undefined;
-
-    if (goal.progress === 100) {
-      goal.progress = 0;
-    }
   }
 
-  await goal.save();
+  try {
+    await goal.save();
+  } catch (error: any) {
+    if (error.code === 11000) {
+      throw new BadRequestError(
+        "Goal with this title already exists in this workspace.",
+      );
+    }
+    throw error;
+  }
 
   if (userId) {
     try {
@@ -186,14 +213,17 @@ export const updateGoalService = async (
         entityName: goal.title,
       });
     } catch (err) {
-      // Non-blocking log safety
+      logger.error("Activity log creation failed on goal update:", err);
     }
   }
 
   return goal.populate(GOAL_POPULATE);
 };
 
-export const deleteGoalService = async (goalId: string): Promise<void> => {
+export const deleteGoalService = async (
+  goalId: string,
+  userId?: string,
+): Promise<void> => {
   const goal = await Goal.findById(goalId);
   if (!goal) {
     throw new NotFoundError("Goal not found.");
@@ -202,11 +232,27 @@ export const deleteGoalService = async (goalId: string): Promise<void> => {
     goal: goal._id,
   });
   await goal.deleteOne();
+
+  if (userId) {
+    try {
+      await createActivityLogService({
+        workspace: goal.workspace,
+        actor: userId,
+        action: "deleted",
+        entityType: "goal",
+        entityId: goal._id,
+        entityName: goal.title,
+      });
+    } catch (err) {
+      logger.error("Activity log creation failed on goal delete:", err);
+    }
+  }
 };
 
 export const linkTaskToGoalService = async (
   goalId: string,
   taskId: string,
+  userId?: string,
 ): Promise<IGoal> => {
   const goal = await Goal.findById(goalId);
   if (!goal) throw new NotFoundError("Goal not found.");
@@ -230,6 +276,22 @@ export const linkTaskToGoalService = async (
 
   await goal.save();
 
+  if (userId) {
+    try {
+      await createActivityLogService({
+        workspace: goal.workspace,
+        actor: userId,
+        action: "updated",
+        entityType: "goal",
+        entityId: goal._id,
+        entityName: goal.title,
+        metadata: { linkedTask: taskId },
+      });
+    } catch (err) {
+      logger.error("Activity log creation failed on task link:", err);
+    }
+  }
+
   return goal.populate([
     ...GOAL_POPULATE,
     { path: "linkedTasks", select: "title status priority" },
@@ -239,6 +301,7 @@ export const linkTaskToGoalService = async (
 export const unlinkTaskFromGoalService = async (
   goalId: string,
   taskId: string,
+  userId?: string,
 ): Promise<IGoal> => {
   const goal = await Goal.findById(goalId);
   if (!goal) throw new NotFoundError("Goal not found.");
@@ -252,6 +315,22 @@ export const unlinkTaskFromGoalService = async (
   goal.linkedTasks.splice(index, 1);
 
   await goal.save();
+
+  if (userId) {
+    try {
+      await createActivityLogService({
+        workspace: goal.workspace,
+        actor: userId,
+        action: "updated",
+        entityType: "goal",
+        entityId: goal._id,
+        entityName: goal.title,
+        metadata: { unlinkedTask: taskId },
+      });
+    } catch (err) {
+      logger.error("Activity log creation failed on task unlink:", err);
+    }
+  }
 
   return goal.populate([
     ...GOAL_POPULATE,

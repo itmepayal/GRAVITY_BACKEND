@@ -5,6 +5,7 @@ import Task from "../../models/task.model";
 import { BadRequestError, NotFoundError } from "../../utils/errors/app.error";
 import { UpdateSprintInput } from "../../validators/sprint.validator";
 import { createActivityLogService } from "../activity-log/activity-log.service";
+import logger from "../../config/logger.config";
 
 export const getSprintByIdService = async (sprintId: string) => {
   const sprint = await Sprint.findById(sprintId)
@@ -89,7 +90,7 @@ export const updateSprintService = async (
         entityName: sprint.name,
       });
     } catch (err) {
-      // Non-blocking log safety
+      logger.error("Activity log creation failed on sprint update:", err);
     }
   }
 
@@ -135,7 +136,7 @@ export const deleteSprintService = async (
         entityName: sprint.name,
       });
     } catch (err) {
-      // Non-blocking log safety
+      logger.error("Activity log creation failed on sprint delete:", err);
     }
   }
 
@@ -176,7 +177,7 @@ export const startSprintService = async (sprintId: string, userId?: string) => {
         metadata: { status: "active" },
       });
     } catch (err) {
-      // Non-blocking log safety
+      logger.error("Activity log creation failed on sprint start:", err);
     }
   }
 
@@ -223,7 +224,7 @@ export const completeSprintService = async (sprintId: string, userId?: string) =
         metadata: { status: "completed" },
       });
     } catch (err) {
-      // Non-blocking log safety
+      logger.error("Activity log creation failed on sprint complete:", err);
     }
   }
 

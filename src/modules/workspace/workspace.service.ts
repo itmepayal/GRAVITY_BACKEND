@@ -24,6 +24,7 @@ import Goal from "../../models/goal.model";
 import Team from "../../models/team.model";
 import { CreateRoleInput } from "../../validators/role.validator";
 import { createActivityLogService } from "../activity-log/activity-log.service";
+import logger from "../../config/logger.config";
 
 const assertValidObjectIds = (ids: Record<string, string>): void => {
   for (const [label, id] of Object.entries(ids)) {
@@ -150,7 +151,7 @@ export const createWorkspaceService = async (
       entityName: workspace.name,
     });
   } catch (err) {
-    // Non-blocking log safety
+    logger.error("Activity log creation failed on workspace create:", err);
   }
 
   return formatWorkspaceResponse(workspace, ownerId);
@@ -510,7 +511,7 @@ export const createProjectService = async (
       entityName: project.name,
     });
   } catch (err) {
-    // Non-blocking log safety
+    logger.error("Activity log creation failed on project create:", err);
   }
 
   return project;

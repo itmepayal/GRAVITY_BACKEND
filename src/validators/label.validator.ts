@@ -18,3 +18,10 @@ export const getWorkspaceLabelsSchema = z.object({
     workspaceId: objectIdSchema,
   }),
 });
+
+export const deleteLabelSchema = z.object({
+  params: z.object({
+    workspaceId: z.string().min(1),
+    id: z.string().min(1),
+  }),
+});

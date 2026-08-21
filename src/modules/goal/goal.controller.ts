@@ -65,8 +65,9 @@ export const getGoalByIdController = asyncHandler(
 export const updateGoalController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { goalId } = req.params;
+    const userId = req.user!.id;
     const data = updateGoalSchema.parse(req.body);
-    const goal = await updateGoalService(goalId, data);
+    const goal = await updateGoalService(goalId, data, userId);
     logger.info(`Goal ${goalId} updated successfully.`);
     AppResponse.success(
       res,
@@ -80,7 +81,8 @@ export const updateGoalController = asyncHandler(
 export const deleteGoalController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { goalId } = req.params;
-    await deleteGoalService(goalId);
+    const userId = req.user!.id;
+    await deleteGoalService(goalId, userId);
     logger.info(`Goal ${goalId} deleted successfully.`);
     AppResponse.success(
       res,
@@ -94,7 +96,8 @@ export const deleteGoalController = asyncHandler(
 export const linkTaskToGoalController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { goalId, taskId } = req.params;
-    const goal = await linkTaskToGoalService(goalId, taskId);
+    const userId = req.user!.id;
+    const goal = await linkTaskToGoalService(goalId, taskId, userId);
     logger.info(`Task ${taskId} linked to goal ${goalId}.`);
     AppResponse.success(
       res,
@@ -108,7 +111,8 @@ export const linkTaskToGoalController = asyncHandler(
 export const unlinkTaskFromGoalController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { goalId, taskId } = req.params;
-    const goal = await unlinkTaskFromGoalService(goalId, taskId);
+    const userId = req.user!.id;
+    const goal = await unlinkTaskFromGoalService(goalId, taskId, userId);
     logger.info(`Task ${taskId} unlinked from goal ${goalId}.`);
     AppResponse.success(
       res,

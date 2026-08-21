@@ -62,13 +62,18 @@ labelRouter.get("/workspace/:workspaceId", getWorkspaceLabelsController);
 
 /**
  * @swagger
- * /labels/{id}:
+ * /labels/workspace/{workspaceId}/{id}:
  *   delete:
  *     tags: [Labels]
- *     summary: Delete a label by ID
+ *     summary: Delete a label by ID (scoped to workspace)
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
  *       - in: path
  *         name: id
  *         required: true
@@ -77,7 +82,9 @@ labelRouter.get("/workspace/:workspaceId", getWorkspaceLabelsController);
  *     responses:
  *       200:
  *         description: Label deleted successfully
+ *       404:
+ *         description: Label not found
  */
-labelRouter.delete("/:id", deleteLabelController);
+labelRouter.delete("/workspace/:workspaceId/:id", deleteLabelController);
 
 export default labelRouter;

@@ -10,6 +10,7 @@ import {
 import {
   createLabelSchema,
   getWorkspaceLabelsSchema,
+  deleteLabelSchema,
 } from "../../validators/label.validator";
 
 export const createLabelController = asyncHandler(
@@ -52,13 +53,12 @@ export const getWorkspaceLabelsController = asyncHandler(
 
 export const deleteLabelController = asyncHandler(
   async (req: Request, res: Response) => {
-    const { id } = req.params;
-    await deleteLabelService(id);
+    const { params } = deleteLabelSchema.parse({
+      params: req.params,
+    });
 
-    AppResponse.success(
-      res,
-      StatusCodes.OK,
-      "Label deleted successfully",
-    );
+    await deleteLabelService(params.id, params.workspaceId);
+
+    AppResponse.success(res, StatusCodes.OK, "Label deleted successfully");
   },
 );
