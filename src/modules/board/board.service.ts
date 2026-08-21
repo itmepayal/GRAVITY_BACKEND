@@ -2,15 +2,21 @@ import mongoose from "mongoose";
 import Board, { IBoard } from "../../models/board.model";
 import Task from "../../models/task.model";
 import Project from "../../models/project.model";
+import Sprint from "../../models/sprint.model";
 import { BadRequestError, NotFoundError } from "../../utils/errors/app.error";
 import { UpdateBoardSchemaType } from "../../validators/board.validator";
+import { createActivityLogService } from "../activity-log/activity-log.service";
 
-const findBoardOrThrow = async (boardId: string): Promise<IBoard> => {
-  if (!mongoose.Types.ObjectId.isValid(boardId)) {
-    throw new NotFoundError("Board not found.");
+const findBoardOrThrow = async (boardOrId: IBoard | string): Promise<IBoard> => {
+  if (typeof boardOrId !== "string") {
+    return boardOrId;
   }
 
-  const board = await Board.findById(boardId);
+  if (!mongoose.Types.ObjectId.isValid(boardOrId)) {
+    throw new BadRequestError("Invalid board ID format.");
+  }
+
+  const board = await Board.findById(boardOrId);
 
   if (!board) {
     throw new NotFoundError("Board not found.");
@@ -43,11 +49,13 @@ export const getBoardWithTasksService = async (board: IBoard) => {
     .populate("createdBy", "name email avatar")
     .sort({ createdAt: 1 });
 
-  const tasksByColumn: Record<string, typeof tasks> = {};
-
-  for (const column of board.columns) {
-    tasksByColumn[column] = [];
-  }
+  const tasksByColumn: Record<string, typeof tasks> = board.columns.reduce(
+    (acc, col) => {
+      acc[col] = [];
+      return acc;
+    },
+    {} as Record<string, typeof tasks>,
+  );
 
   for (const task of tasks) {
     if (!tasksByColumn[task.column]) {
@@ -72,10 +80,12 @@ export const getBoardWithTasksService = async (board: IBoard) => {
 };
 
 export const updateBoardService = async (
-  boardId: string,
+  boardOrId: IBoard | string,
   data: UpdateBoardSchemaType,
+  actorId?: string,
 ): Promise<IBoard> => {
-  const board = await findBoardOrThrow(boardId);
+  const board = await findBoardOrThrow(boardOrId);
+  const boardId = board._id.toString();
 
   if (data.name !== undefined) {
     board.name = data.name;
@@ -119,24 +129,58 @@ export const updateBoardService = async (
     { path: "workspace", select: "name color icon" },
   ]);
 
+  if (actorId) {
+    try {
+      await createActivityLogService({
+        workspace: board.workspace,
+        actor: actorId,
+        action: "updated",
+        entityType: "board",
+        entityId: board._id,
+        entityName: board.name,
+      });
+    } catch (err) {
+      // Non-blocking activity log safety
+    }
+  }
+
   return board;
 };
 
 export const deleteBoardService = async (
-  boardId: string,
+  boardOrId: IBoard | string,
+  actorId?: string,
 ): Promise<{ message: string }> => {
-  const board = await findBoardOrThrow(boardId);
+  const board = await findBoardOrThrow(boardOrId);
+  const boardId = board._id;
 
   const session = await mongoose.startSession();
 
   try {
     await session.withTransaction(async () => {
       await Task.deleteMany({ board: boardId }, { session });
+      await Sprint.updateMany({ board: boardId }, { $unset: { board: "" } }, { session });
       await board.deleteOne({ session });
     });
   } finally {
     await session.endSession();
   }
 
+  if (actorId) {
+    try {
+      await createActivityLogService({
+        workspace: board.workspace,
+        actor: actorId,
+        action: "deleted",
+        entityType: "board",
+        entityId: board._id,
+        entityName: board.name,
+      });
+    } catch (err) {
+      // Non-blocking activity log safety
+    }
+  }
+
   return { message: "Board deleted successfully." };
 };
+

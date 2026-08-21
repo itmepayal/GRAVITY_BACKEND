@@ -40,10 +40,10 @@ export const getBoardByIdController = asyncHandler(
 
 export const updateBoardController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { boardId } = req.params;
     const boardData = updateBoardSchema.parse(req.body);
-    const board = await updateBoardService(boardId, boardData);
-    logger.info(`Board ${boardId} updated successfully.`);
+    const userId = req.user!.id;
+    const board = await updateBoardService(req.board!, boardData, userId);
+    logger.info(`Board ${req.board!._id} updated successfully.`);
     AppResponse.success(
       res,
       StatusCodes.OK,
@@ -55,9 +55,9 @@ export const updateBoardController = asyncHandler(
 
 export const deleteBoardController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { boardId } = req.params;
-    const result = await deleteBoardService(boardId);
-    logger.info(`Board ${boardId} deleted successfully.`);
+    const userId = req.user!.id;
+    const result = await deleteBoardService(req.board!, userId);
+    logger.info(`Board ${req.board!._id} deleted successfully.`);
     AppResponse.success(res, StatusCodes.OK, result.message, null);
   },
 );
