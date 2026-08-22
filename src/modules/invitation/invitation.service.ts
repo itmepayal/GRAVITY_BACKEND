@@ -99,7 +99,7 @@ export const createEmailInvitationService = async (
     );
   }
 
-  const invitation = await Invitation.create({
+  let invitation = await Invitation.create({
     workspace: workspaceId,
     role: roleId,
     invitedBy,
@@ -178,6 +178,10 @@ export const getInvitationByTokenService = async (token: string) => {
 
   if (!invitation) throw new NotFoundError("Invitation not found.");
 
+  if (invitation.status === "revoked") {
+    throw new BadRequestError("This invitation has been revoked.");
+  }
+
   if (invitation.expiresAt && invitation.expiresAt < new Date()) {
     throw new BadRequestError("This invitation has expired.");
   }
@@ -186,10 +190,6 @@ export const getInvitationByTokenService = async (token: string) => {
     throw new BadRequestError(
       `This invitation has already been ${invitation.status}.`,
     );
-  }
-
-  if (invitation.status === "revoked") {
-    throw new BadRequestError("This invitation has been revoked.");
   }
 
   return invitation;

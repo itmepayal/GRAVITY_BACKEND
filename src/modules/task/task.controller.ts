@@ -24,6 +24,7 @@ import {
   addAttachmentSchema,
   removeAttachmentSchema,
   updateActualHoursSchema,
+  projectIdParamSchema,
 } from "../../validators/task.validator";
 import {
   createTaskService,
@@ -46,6 +47,7 @@ import {
   removeAttachmentService,
   updateActualHoursService,
   getMyTasksService,
+  getAllTasksOfProjectService,
 } from "./task.service";
 import { uploadToCloudinary } from "../../config/cloudinary.config";
 import { IAttachment } from "../../models/task.model";
@@ -54,18 +56,10 @@ import { BadRequestError } from "../../utils/errors/app.error";
 export const createTaskController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const userId = req.user!.id;
-
-    console.log("Welcome DODO");
-    console.log(req.body);
-
-    const parsedData = JSON.parse(req.body.data);
-
+    const parsedData = req.body?.data ? JSON.parse(req.body.data) : req.body;
     const body = createTaskSchema.parse(parsedData);
-
     const files = req.files as Express.Multer.File[];
-
     const attachments = [];
-
     if (files?.length) {
       for (const file of files) {
         const resourceType =
@@ -87,14 +81,11 @@ export const createTaskController = asyncHandler(
         });
       }
     }
-
     const task = await createTaskService(userId, {
       ...body,
       attachments,
     });
-
     logger.info(`Task ${task.id} created successfully.`);
-
     AppResponse.success(
       res,
       StatusCodes.CREATED,
@@ -523,6 +514,33 @@ export const getMyTasksController = asyncHandler(
       res,
       StatusCodes.OK,
       "My tasks fetched successfully.",
+      tasks,
+    );
+  },
+);
+
+export const getAllTasksOfProjectController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { projectId } = projectIdParamSchema.parse({
+      params: req.params,
+    }).params;
+
+    const { status, priority, assignee, team, isArchived } =
+      taskListQuerySchema.parse({ query: req.query }).query;
+
+    const tasks = await getAllTasksOfProjectService(projectId, {
+      status,
+      priority,
+      assignee,
+      team,
+      isArchived,
+    });
+
+    logger.info(`Tasks for project ${projectId} fetched successfully.`);
+    AppResponse.success(
+      res,
+      StatusCodes.OK,
+      "Project tasks fetched successfully.",
       tasks,
     );
   },

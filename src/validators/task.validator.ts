@@ -308,3 +308,9 @@ export const removeDependencySchema = z.object({
     blockerId: objectIdSchema,
   }),
 });
+
+export const projectIdParamSchema = z.object({
+  params: z.object({
+    projectId: z.string().min(1, "Project ID is required."),
+  }),
+});

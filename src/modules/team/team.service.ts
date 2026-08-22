@@ -8,11 +8,26 @@ import {
   UpdateTeamInput,
 } from "../../validators/team.validator";
 
+const TEAM_POPULATE = [
+  { path: "lead", select: "name email avatar" },
+  { path: "members.user", select: "name email avatar" },
+  { path: "createdBy", select: "name email avatar" },
+];
+
+const assertValidId = (id: string, label: string) => {
+  if (!Types.ObjectId.isValid(id)) {
+    throw new NotFoundError(`${label} not found.`);
+  }
+};
+
 export const createTeamService = async (
   workspaceId: string,
   createdBy: string,
   data: CreateTeamInput,
 ) => {
+  assertValidId(workspaceId, "Workspace");
+  assertValidId(data.lead, "Team lead");
+
   const workspace = await Workspace.findById(workspaceId);
 
   if (!workspace) {
@@ -59,16 +74,14 @@ export const createTeamService = async (
     members: [{ user: new Types.ObjectId(data.lead), joinedAt: new Date() }],
   });
 
-  return team.populate([
-    { path: "lead", select: "name email avatar" },
-    { path: "members.user", select: "name email avatar" },
-    { path: "createdBy", select: "name email avatar" },
-  ]);
+  return team.populate(TEAM_POPULATE);
 };
 
 export const getWorkspaceTeamsService = async (
   workspaceId: string,
 ): Promise<ITeam[]> => {
+  assertValidId(workspaceId, "Workspace");
+
   return Team.find({ workspace: workspaceId })
     .populate("lead", "name email avatar")
     .populate("members.user", "name email avatar")
@@ -76,27 +89,20 @@ export const getWorkspaceTeamsService = async (
 };
 
 export const getTeamByIdService = async (team: ITeam): Promise<ITeam> => {
-  return team.populate([
-    { path: "lead", select: "name email avatar" },
-    { path: "members.user", select: "name email avatar" },
-    { path: "createdBy", select: "name email avatar" },
-  ]);
+  return team.populate(TEAM_POPULATE);
 };
 
 export const updateTeamService = async (
   teamId: string,
   data: UpdateTeamInput,
 ): Promise<ITeam> => {
+  assertValidId(teamId, "Team");
+
   const team = await Team.findById(teamId);
   if (!team) throw new NotFoundError("Team not found.");
 
   if (data.name?.trim()) {
     const trimmedName = data.name.trim();
-
-    if (!trimmedName) {
-      throw new BadRequestError("Team name is required.");
-    }
-
     const escapedName = trimmedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
     if (trimmedName.toLowerCase() !== team.name.toLowerCase()) {
@@ -124,14 +130,12 @@ export const updateTeamService = async (
 
   await team.save();
 
-  return team.populate([
-    { path: "lead", select: "name email avatar" },
-    { path: "members.user", select: "name email avatar" },
-    { path: "createdBy", select: "name email avatar" },
-  ]);
+  return team.populate(TEAM_POPULATE);
 };
 
 export const deleteTeamService = async (teamId: string): Promise<void> => {
+  assertValidId(teamId, "Team");
+
   const team = await Team.findById(teamId);
   if (!team) throw new NotFoundError("Team not found.");
   await team.deleteOne();
@@ -141,6 +145,9 @@ export const addTeamMemberService = async (
   teamId: string,
   userId: string,
 ): Promise<ITeam> => {
+  assertValidId(teamId, "Team");
+  assertValidId(userId, "User");
+
   const team = await Team.findById(teamId);
   if (!team) throw new NotFoundError("Team not found.");
 
@@ -167,22 +174,18 @@ export const addTeamMemberService = async (
   if (alreadyMember) {
     throw new BadRequestError("User is already a member of this team.");
   }
-
   team.members.push({ user: new Types.ObjectId(userId), joinedAt: new Date() });
-
   await team.save();
-
-  return team.populate([
-    { path: "lead", select: "name email avatar" },
-    { path: "members.user", select: "name email avatar" },
-    { path: "createdBy", select: "name email avatar" },
-  ]);
+  return team.populate(TEAM_POPULATE);
 };
 
 export const removeTeamMemberService = async (
   teamId: string,
   userId: string,
 ): Promise<ITeam> => {
+  assertValidId(teamId, "Team");
+  assertValidId(userId, "User");
+
   const team = await Team.findById(teamId);
   if (!team) throw new NotFoundError("Team not found.");
 
@@ -194,22 +197,18 @@ export const removeTeamMemberService = async (
 
   const member = team.members.find((m) => m.user.toString() === userId);
   if (!member) throw new NotFoundError("Member not found in this team.");
-
   team.members = team.members.filter((m) => m.user.toString() !== userId);
-
   await team.save();
-
-  return team.populate([
-    { path: "lead", select: "name email avatar" },
-    { path: "members.user", select: "name email avatar" },
-    { path: "createdBy", select: "name email avatar" },
-  ]);
+  return team.populate(TEAM_POPULATE);
 };
 
 export const changeTeamLeadService = async (
   teamId: string,
   newLeadId: string,
 ): Promise<ITeam> => {
+  assertValidId(teamId, "Team");
+  assertValidId(newLeadId, "User");
+
   const team = await Team.findById(teamId);
   if (!team) throw new NotFoundError("Team not found.");
 
@@ -240,12 +239,6 @@ export const changeTeamLeadService = async (
   }
 
   team.lead = new Types.ObjectId(newLeadId);
-
   await team.save();
-
-  return team.populate([
-    { path: "lead", select: "name email avatar" },
-    { path: "members.user", select: "name email avatar" },
-    { path: "createdBy", select: "name email avatar" },
-  ]);
+  return team.populate(TEAM_POPULATE);
 };

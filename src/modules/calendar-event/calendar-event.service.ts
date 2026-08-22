@@ -1,5 +1,8 @@
 import { Types } from "mongoose";
-import CalendarEvent, { ICalendarEvent, EventType } from "../../models/calendar-event";
+import CalendarEvent, {
+  ICalendarEvent,
+  EventType,
+} from "../../models/calendar-event";
 import { NotFoundError } from "../../utils/errors/app.error";
 
 export interface CreateCalendarEventInput {
@@ -45,7 +48,9 @@ export const getWorkspaceCalendarEventsService = async (
   startDate?: Date,
   endDate?: Date,
 ): Promise<ICalendarEvent[]> => {
-  const query: Record<string, any> = { workspace: new Types.ObjectId(workspaceId) };
+  const query: Record<string, any> = {
+    workspace: new Types.ObjectId(workspaceId),
+  };
   if (projectId) query.project = new Types.ObjectId(projectId);
 
   if (startDate && endDate) {

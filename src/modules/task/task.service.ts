@@ -187,7 +187,10 @@ export const updateTaskService = async (
       await createActivityLogService({
         workspace: task.workspace,
         actor: userId,
-        action: data.status && data.status !== oldStatus ? "status_changed" : "updated",
+        action:
+          data.status && data.status !== oldStatus
+            ? "status_changed"
+            : "updated",
         entityType: "task",
         entityId: task._id,
         entityName: task.title,
@@ -774,6 +777,30 @@ export const getMyTasksService = async (
     .populate("workspace", "name")
     .populate("project", "name")
     .populate("board", "name")
+    .sort({ createdAt: -1 });
+
+  return tasks;
+};
+
+export const getAllTasksOfProjectService = async (
+  projectId: string,
+  filters: TaskListFilters,
+) => {
+  const project = await Project.findById(projectId);
+  if (!project) {
+    throw new NotFoundError("Project not found.");
+  }
+
+  const filter: Record<string, any> = { project: projectId };
+  if (filters.status) filter.status = filters.status;
+  if (filters.priority) filter.priority = filters.priority;
+  if (filters.assignee) filter.assignee = filters.assignee;
+  if (filters.team) filter.team = filters.team;
+  filter.isArchived = filters.isArchived ?? false;
+
+  const tasks = await Task.find(filter)
+    .select("title status priority")
+    .populate("assignee", "name email avatar")
     .sort({ createdAt: -1 });
 
   return tasks;

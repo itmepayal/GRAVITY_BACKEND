@@ -28,6 +28,7 @@ import {
   removeWatcherController,
   getMyTasksController,
   updateActualHoursController,
+  getAllTasksOfProjectController,
 } from "./task.controller";
 import { upload } from "../../middlewares/multer.middleware";
 
@@ -805,6 +806,59 @@ taskRouter.patch(
   checkTaskAccess,
   requirePermission("task:update"),
   updateActualHoursController,
+);
+
+/**
+ * @swagger
+ * /tasks/projects/{projectId}/tasks:
+ *   get:
+ *     tags: [Tasks]
+ *     summary: Get all tasks in a project
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [todo, in_progress, in_review, completed]
+ *       - in: query
+ *         name: priority
+ *         schema:
+ *           type: string
+ *           enum: [low, medium, high, urgent]
+ *       - in: query
+ *         name: assignee
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: isArchived
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       200:
+ *         description: Project tasks fetched successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TasksListResponse'
+ *       404:
+ *         description: Project not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiErrorResponse'
+ */
+taskRouter.get(
+  "/projects/:projectId/tasks",
+  authenticate,
+  requirePermission("task:view"),
+  getAllTasksOfProjectController,
 );
 
 export default taskRouter;

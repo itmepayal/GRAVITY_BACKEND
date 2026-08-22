@@ -77,10 +77,6 @@ export const deleteMilestoneController = asyncHandler(
     const { id } = req.params;
     await deleteMilestoneService(id);
 
-    AppResponse.success(
-      res,
-      StatusCodes.OK,
-      "Milestone deleted successfully",
-    );
+    AppResponse.success(res, StatusCodes.OK, "Milestone deleted successfully");
   },
 );

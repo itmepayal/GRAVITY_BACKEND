@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import Task from "../models/task.model";
-import { ForbiddenError, NotFoundError } from "../utils/errors/app.error";
+import {
+  ForbiddenError,
+  NotFoundError,
+  BadRequestError,
+} from "../utils/errors/app.error";
 import { checkBoardAccess } from "./board.middleware";
 import { checkProjectAccess } from "./project.middleware";
 
@@ -32,7 +36,22 @@ export const checkTaskCreateAccess = async (
   next: NextFunction,
 ) => {
   try {
-    const data = JSON.parse(req.body.data);
+    let data: any;
+
+    if (req.body?.data !== undefined) {
+      try {
+        data =
+          typeof req.body.data === "string"
+            ? JSON.parse(req.body.data)
+            : req.body.data;
+      } catch {
+        throw new BadRequestError("Invalid task data format.");
+      }
+    } else if (req.body && Object.keys(req.body).length > 0) {
+      data = req.body;
+    } else {
+      throw new BadRequestError("Task data is required.");
+    }
 
     const { board } = data;
 
@@ -40,6 +59,7 @@ export const checkTaskCreateAccess = async (
       throw new NotFoundError("Board is required to create a task.");
     }
 
+    req.body.parsedData = data;
     req.params.boardId = board;
 
     return checkBoardAccess(req, res, next);

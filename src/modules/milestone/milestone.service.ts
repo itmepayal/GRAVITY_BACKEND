@@ -1,5 +1,8 @@
 import { Types } from "mongoose";
-import Milestone, { IMilestone, MilestoneStatus } from "../../models/timeline.model";
+import Milestone, {
+  IMilestone,
+  MilestoneStatus,
+} from "../../models/timeline.model";
 import { NotFoundError } from "../../utils/errors/app.error";
 
 export interface CreateMilestoneInput {
@@ -53,11 +56,6 @@ export const updateMilestoneService = async (
   }
 
   Object.assign(milestone, data);
-
-  if (data.status === "completed" && !milestone.completedAt) {
-    milestone.completedAt = new Date();
-    milestone.progress = 100;
-  }
 
   await milestone.save();
   return milestone.populate([
